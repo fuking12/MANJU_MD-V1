@@ -1,5 +1,5 @@
 const {cmd , commands} = require('../command')
-const {readEnv} = require('../lib/database')
+const config = require('../config');
 
 cmd({
     pattern: "alive",
