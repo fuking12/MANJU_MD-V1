@@ -8,7 +8,7 @@ cmd(
   {
     pattern: "fb",
     alias: ["facebook"],
-    react: "🍑",
+    react: "💽",
     category: "download",
     desc: "Download Facebook videos (HD or SD) with thumbnail and extra info",
     filename: __filename,
@@ -87,7 +87,7 @@ cmd(
           caption += `📌 Quality: ${videoData.quality}\n`;
         }
 
-        caption += `✅ Pᴏᴡᴇʀᴅ ʙʏ Mᴀɴᴊᴜ_Mᴅ📵`;
+        caption += `✅ Powered by ❄️ Frozen MD ❄️`;
 
         if (videoData.thumbnail) {
           await robin.sendMessage(
@@ -144,7 +144,7 @@ cmd(
 
     } catch (e) {
       console.error("Error in fb_quality command:", e.message, e.stack);
-      await reply("*❌ Error processing your request. Please try again.* 🌍");
+      await reply("*❌ Error processing your request. Please try again.* ❄️");
     }
   }
 );
