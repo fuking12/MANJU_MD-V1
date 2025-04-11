@@ -13,4 +13,5 @@ module.exports = {
   ALIVE_MSG: process.env.ALIVE_MSG || "",
   AUTO_READ_STATUS: process.env.AUTO_READ_STATUS || "true",
   MODE: process.env.MODE || "public",
+  API_KEY:process.env.API_KEY || "sky|e6ad5555ee53b73644770beab633855c2f646a77",
 };
