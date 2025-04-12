@@ -6,7 +6,7 @@ function convertToBool(text, fault = "true") {
   return text === fault ? true : false;
 }
 module.exports = {
-  SESSION_ID: process.env.SESSION_ID || "fawGWQjK#1wpeJzlmFqcaFSsTJg3xq5rCuSNmu31Z3oSfoMAZBck",
+  SESSION_ID: process.env.SESSION_ID || "2PJmSbZa#LSoVewqnJuId6guhMBSX_1dhXL9dUgSaI0a-_R9joq0",
   OWNER_NUM: process.env.OWNER_NUM || "94766863255",
   PREFIX:process.env.PREFIX || ".",
   ALIVE_IMG: process.env.ALIVE_IMG || "https://raw.githubusercontent.com/Manju362/Link-gamu./refs/heads/main/IMG-20250408-WA0003.jpg",
