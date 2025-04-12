@@ -5,13 +5,19 @@ module.exports = {
   category: "info",
   use: ".ping",
   async run({ msg, sock }) {
-    const start = Date.now();
+    const start = new Date().getTime();
 
-    const loadingMsg = await msg.reply("╭─⏳ *Ping Check...*\n├── ධාවනය වෙමින්...\n╰── කරුණාකර රැඳී සිටින්න...");
+    // Send initial loading message
+    let loadingMsg = await sock.sendMessage(msg.from, {
+      text: "╭─⏳ *Ping Check...*\n├── ධාවනය වෙමින්...\n╰── කරුණාකර රැඳී සිටින්න...",
+      quoted: msg
+    });
 
-    const end = Date.now();
+    // Measure response time
+    const end = new Date().getTime();
     const ping = end - start;
 
+    // Edit the message with the result
     await sock.sendMessage(msg.from, {
       text: `╭─📡 *Ping Result*\n├── 📶 *Response Time:* ${ping} ms\n╰── ✅ *Bot Active!*`,
       edit: loadingMsg.key
