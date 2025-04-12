@@ -2,51 +2,47 @@ const os = require('os');
 const { performance } = require('perf_hooks');
 
 module.exports = {
-  name: 'system',
-  alias: ['ping', 'system', 'status', 'පිං', 'සියු'],
+  name: 'ping',
+  alias: ['system', 'status', 'පිං'],
   category: 'system',
-  desc: 'බොට් සම්බන්ධ තොරතුරු පෙන්වයි',
+  desc: 'Bot පද්ධතිය පරීක්ෂා කරයි',
   async exec({ sock, m }) {
     const start = performance.now();
-
     const loading = await sock.sendMessage(m.chat, {
-      text: '*🔍 බොට් පද්ධතිය පරීක්ෂා කරමින් සිටී...*'
+      text: '*🔍 බොට් පද්ධතිය පරීක්ෂා වෙමින්...*'
     }, { quoted: m });
 
     const end = performance.now();
     const ping = (end - start).toFixed(2);
 
     const uptime = process.uptime();
-    const hours = Math.floor(uptime / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
-    const seconds = Math.floor(uptime % 60);
+    const h = Math.floor(uptime / 3600);
+    const mnt = Math.floor((uptime % 3600) / 60);
+    const s = Math.floor(uptime % 60);
 
-    const usedMem = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
-    const totalMem = (os.totalmem() / 1024 / 1024).toFixed(2);
-    const platform = os.platform();
+    const used = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+    const total = (os.totalmem() / 1024 / 1024).toFixed(2);
     const cpu = os.cpus()[0].model;
+    const platform = os.platform();
 
-    const status = `
-*📊 BOT පද්ධති තොරතුරු*
+    const msg = `
+*📊 MANJU_MD බොට් තත්වය*
 
 *📶 Ping:* ${ping} ms
-*⏱️ Uptime:* ${hours}h ${minutes}m ${seconds}s
-*💾 Memory:* ${usedMem} MB / ${totalMem} MB
+*⏱️ Uptime:* ${h}h ${mnt}m ${s}s
+*💾 Memory:* ${used} MB / ${total} MB
 *🖥️ Platform:* ${platform}
 *⚙️ CPU:* ${cpu}
-
-*© MANJU_MD බොට් සේවාව*
-`;
+`.trim();
 
     await sock.sendMessage(m.chat, {
-      text: status.trim(),
-      footer: 'මීළඟට කරන්න ඔයාලට කැමති දෙයක් තෝරන්න',
+      text: msg,
+      footer: 'මීළඟට කරන්නේ මොකද්ද?',
       buttons: [
-        { buttonId: 'ping', buttonText: { displayText: '🔁 පිං නැවත බලන්න' }, type: 1 },
-        { buttonId: 'menu', buttonText: { displayText: '🏠 මූලපිට යන්න' }, type: 1 }
+        { buttonId: 'ping', buttonText: { displayText: '🔁 නැවත පරීක්ෂා කරන්න' }, type: 1 },
+        { buttonId: 'menu', buttonText: { displayText: '🏠 මූලපිට' }, type: 1 }
       ],
-      headerType: 1,
-      edit: loading.key
+      headerType: 1
     });
   }
 };
