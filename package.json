@@ -27,6 +27,7 @@
     "mongoose": "^8.13.2",
     "fb-downloader-scrapper": "^3.0.1",
     "canvas": "^3.1.0",
-    "youtubedl-core": "^4.11.7"
+    "youtubedl-core": "^4.11.7",
+    "denethdev-ytmp3": "^1.0.3"
   }
 }
