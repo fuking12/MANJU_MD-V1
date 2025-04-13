@@ -1,6 +1,5 @@
 const { cmd } = require('../command');
-const axios = require('axios');
-const cheerio = require('cheerio');
+const ytdlp = require('yt-dlp-exec');  // yt-dlp package import
 
 cmd({
     pattern: "xhamster",
@@ -19,26 +18,28 @@ async (conn, mek, m, { from, q, reply }) => {
     reply("විඩියෝ එක බාගෙන යමින් පවතියි. කරුණාකර රැදී සිටින්න...");
 
     try {
-        const res = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0'
-            }
+        // Use yt-dlp to fetch video data from XHamster
+        const result = await ytdlp(url, {
+            dumpSingleJson: true,
+            noWarnings: true,
+            noCheckCertificate: true,
+            preferFreeFormats: true
         });
-        const $ = cheerio.load(res.data);
-        const json = JSON.parse($('script#__NEXT_DATA__').html());
-        const video = json.props.pageProps.videoModel;
 
-        const videoUrl = video.sources?.download?.high || video.sources?.download?.default;
-        const title = video.title;
+        // Extract video URL and title
+        const videoUrl = result?.url;
+        const title = result?.title;
 
         if (!videoUrl) return reply("විඩියෝ එක බාගත කළ නොහැක.");
 
+        // Send video download message to WhatsApp
         await conn.sendMessage(from, {
             video: { url: videoUrl },
             caption: `> *${title}*\n\n_© Powered by MANJU_MD_`,
             mimetype: 'video/mp4'
         }, { quoted: mek });
 
+        // React with success emoji
         await conn.sendMessage(from, { react: { text: '✅', key: mek.key } });
 
     } catch (e) {
