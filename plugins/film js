@@ -1,0 +1,42 @@
+const { default: axios } = require("axios");
+const cheerio = require("cheerio");
+
+module.exports = {
+  cmd: ["film", "movie", "චිත්‍රපටය"],
+  help: "፨ .film මාරයා | සිනමා නමක්",
+  desc: "Cinesubz, SinhalaSub, Cineru වගේ වෙබ් අඩවි වලින් සිංහල උපසිරසි චිත්‍රපට බාගැනීම",
+  type: "movie",
+  use: "<movie name>",
+
+  async handler(m, { text, conn, args }) {
+    if (!text) return m.reply("📽️ කරුණාකර සෙවීමට චිත්‍රපට නමක් ලබාදෙන්න.\n\nඋදා: `.film John Wick 4`");
+
+    const searchUrl = `https://cinesubz.co/?s=${encodeURIComponent(text)}`;
+    let res = await axios.get(searchUrl);
+    const $ = cheerio.load(res.data);
+
+    const movies = [];
+    $("h2.title").each((i, el) => {
+      const title = $(el).text().trim();
+      const link = $(el).find("a").attr("href");
+      if (title && link) {
+        movies.push({ title, link });
+      }
+    });
+
+    if (movies.length === 0) return m.reply("🔍 කිසිවක් හමු නොවුණා. වෙනත් නමක් උත්සාහ කරන්න.");
+
+    const buttons = movies.slice(0, 5).map((movie, index) => ({
+      buttonId: `.getfilm ${movie.link}`,
+      buttonText: { displayText: `${index + 1}. ${movie.title}` },
+      type: 1,
+    }));
+
+    await conn.sendMessage(m.chat, {
+      text: `🎬 "${text}" සඳහා චිත්‍රපට හමු විය. කරුණාකර තෝරන්න:`,
+      buttons,
+      footer: "© MANJU_MD Bot",
+      headerType: 1,
+    }, { quoted: m });
+  }
+};
