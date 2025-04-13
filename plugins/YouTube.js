@@ -1,9 +1,9 @@
-const { youtubedl } = require('@bochilteam/scraper');
+const axios = require('axios');
 
 module.exports = {
   name: 'youtube',
   alias: ['yt', 'ytmp4'],
-  description: 'YouTube වීඩියෝවක් බාගත කරන්න - MP4 පමණි',
+  description: 'YouTube Video Downloader using Y2mate API',
   category: 'downloader',
   use: '<youtube_url>',
   async execute(m, { conn, args }) {
@@ -14,30 +14,25 @@ module.exports = {
       return m.reply('වලංගු YouTube ලින්ක් එකක් ලබා දෙන්න.');
     }
 
-    await m.reply('විඩියෝව ලබා ගන්නා中...');
+    await m.reply('විඩියෝ විස්තර ලබා ගන්නා中...');
 
     try {
-      const result = await youtubedl(url);
-      console.log('YouTube Result:', result);
+      const res = await axios.get(`https://y2mate.guru/api/v1/ytmp4?url=${encodeURIComponent(url)}`);
+      const data = res.data;
 
-      if (!result || !result.video) {
-        return m.reply('වීඩියෝ එක සොයාගත නොහැක.');
+      if (!data || !data.status || !data.result || !data.result.link) {
+        return m.reply('වීඩියෝව බාගත කළ නොහැක. වෙනත් ලින්ක් එකක් අためය.');
       }
 
-      const { title, video, thumbnail } = result;
-      const mp4 = video['360p'] || video['480p'] || video['720p'] || Object.values(video)[0];
-
-      if (!mp4 || !mp4.url) {
-        return m.reply('බාගත කිරීම අසාර්ථකයි.');
-      }
+      const { title, link, thumbnail } = data.result;
 
       await conn.sendMessage(m.chat, {
-        video: { url: mp4.url },
+        video: { url: link },
         caption: `✅ *මාතෘකාව:* ${title}`
       }, { quoted: m });
 
-    } catch (err) {
-      console.error('YouTube Plugin Error:', err);
+    } catch (error) {
+      console.error('Y2mate Error:', error);
       m.reply('දෝෂයක් ඇතිවී ඇත. කරුණාකර නැවත උත්සාහ කරන්න.');
     }
   }
