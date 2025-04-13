@@ -1,6 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-// cmd command ඔයාහෙ තියන විදියට require කරන්න ❤️
+const { cmd, commands } = require('../command');
 
 const headers1 = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
