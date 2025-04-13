@@ -36,6 +36,7 @@
     "file-type": "^20.4.1",
     "@bochilteam/scraper": "^5.0.1",
     "semver": "^7.3.5",
-    "lru-cache": "^6.0.0"
+    "lru-cache": "^6.0.0",
+    "ytdl-core": "^4.11.5"
   }
 }
