@@ -118,9 +118,9 @@ cmd({
       hostname = "𝚅𝙿𝚂 || 𝚄𝙽𝙺𝙽𝙾𝚆𝙽";
     }
 
-     const jsonURL = 'https://github.com/haansaanaa/haansaanaa/raw/main/haansaanaa.js';
+     const jsonURL = 'https://raw.githubusercontent.com/Manju362/Link-gamu./refs/heads/main/Manju.js';
         const jsonData = await axios.get(jsonURL);
-                const kramretaw = jsonData.data.kramretaw || "*ᴍᴏɴᴇʏ ʜᴇɪꜱᴛ ᴍᴅ*\n* ᴍʀ ᴅɪʟᴀ ᴏꜰᴄ";
+                const kramretaw = jsonData.data.kramretaw || "*MANJU MD*\n* MR MANJU OFC"
     
     const films = await getMovieDetailsAndDownloadLinks(q);
     
@@ -129,7 +129,7 @@ cmd({
     }
 
 
-let filmListMessage = "📢 *\`Money Heist MD\`*\n\n🎥 *Movie Search Results*\n*Reply Number ⤵️*\n\n";
+let filmListMessage = "📢 *\`Manju_MD\`*\n\n🎥 *Movie Search Results*\n*Reply Number ⤵️*\n\n";
 const numberEmojis = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"];
 
 films.forEach((film, index) => {
