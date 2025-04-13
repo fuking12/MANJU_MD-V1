@@ -20,17 +20,19 @@ async (conn, mek, m, { from, q, reply }) => {
     try {
         const res = await axios.get(`https://www.xvideos.com/?k=${encodeURIComponent(searchTerm)}`, {
             headers: {
-                'User-Agent': 'Mozilla/5.0'
+                'User-Agent': 'Mozilla/5.0',
             }
         });
 
         const $ = cheerio.load(res.data);
         const videoLinks = [];
-        
+
         // Example: Find video links based on search term
-        $('a.video-thumb').each((i, elem) => {
+        $('a.thumb').each((i, elem) => {
             const videoUrl = $(elem).attr('href');
-            if (videoUrl) videoLinks.push(videoUrl);
+            if (videoUrl && videoUrl.includes('https://www.xvideos.com')) {
+                videoLinks.push(videoUrl);
+            }
         });
 
         if (videoLinks.length === 0) return reply("18+ විඩියෝ සොයා ගත නොහැක.");
