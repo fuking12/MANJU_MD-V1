@@ -9,13 +9,11 @@ module.exports = {
     if (!input) return await message.reply("මට කතා කරන්න උදව්වක් ඕනෙ. උදා: .love හෙලෝ බැබි");
 
     try {
-      const prompt = `You are a romantic Sinhala-speaking AI girlfriend or boyfriend. Be flirty, kind, and sweet.\n\nUser: ${input}\nAI:`;
-
       const res = await fetch("https://api.chatanywhere.com.cn/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer FREE_API_KEY"
+          Authorization: "Bearer sk-F23CEXX1GCv0gXMyzzogYxxxxxOp1Z5tnHB1eWLM9zR1oZk"
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
