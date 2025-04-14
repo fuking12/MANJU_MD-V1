@@ -1,39 +1,61 @@
-const { cmd } = require('../lib/command');
+const { cmd } = require("../command");
+const fs = require("fs");
 
 cmd({
-  pattern: 'owner',
-  desc: 'Bot owner contact info',
-  category: 'info',
-  filename: __filename,
-}, async (client, m) => {
-  const ownerNumber = '94766863255';
-  const ownerName = 'Pathum Rajapakshe';
+    pattern: "restart",
+    fromMe: true,
+    desc: "Bot එක restart කරන්න",
+    category: "owner",
+    filename: __filename,
+}, async (client, m, sock) => {
+    await sock.reply("Bot එක දැන් restart වෙන්න යනවා...");
+    process.exit(0);
+});
 
-  const caption = `
-*👑 BOT OWNER DETAILS 👑*
+cmd({
+    pattern: "broadcast",
+    fromMe: true,
+    desc: "ඔයාලට inbox / group broadcast එකක් යවන්න",
+    category: "owner",
+    filename: __filename,
+}, async (client, m, sock) => {
+    if (!sock.q) return sock.reply("කරුණාකර Broadcast message එකක් දාන්න.");
 
-╭───────────────◆
-│ *📛 නම:* ${ownerName}
-│ *📞 නම්බර්:* wa.me/${ownerNumber}
-│ *💬 WhatsApp:* Always Active
-│ *🌐 GitHub:* github.com/Manju362
-╰───────────────◆
+    const chats = await client.groupFetchAllParticipating();
+    const groups = Object.entries(chats).map(([jid, group]) => jid);
 
-_ඔබට ගැටලුවක් ඇත්නම් Ownerව සම්බන්ධ කරන්න._
-`.trim();
-
-  await client.sendMessage(m.chat, {
-    text: caption,
-    contextInfo: {
-      externalAdReply: {
-        title: 'Pathum Rajapakshe - Owner',
-        body: 'Click to Contact via WhatsApp',
-        thumbnailUrl: 'https://telegra.ph/file/ea0ae33a6e3cdb3c160dd.jpg',
-        mediaType: 1,
-        renderLargerThumbnail: true,
-        showAdAttribution: true,
-        sourceUrl: `https://wa.me/${ownerNumber}`
-      }
+    for (let jid of groups) {
+        await client.sendMessage(jid, { text: sock.q });
     }
-  }, { quoted: m });
+
+    sock.reply("Broadcast එක groups වලට යවලා තියෙනවා.");
+});
+
+cmd({
+    pattern: "listplugins",
+    fromMe: true,
+    desc: "ඉන්ස්ටෝල් කරලා තියෙන plugins list එක පෙන්වයි",
+    category: "owner",
+    filename: __filename,
+}, async (_client, _m, sock) => {
+    const pluginPath = "./plugins";
+    const plugins = fs.readdirSync(pluginPath).filter(file => file.endsWith(".js"));
+    const list = plugins.map(p => `• ${p}`).join("\n");
+    sock.reply(`🧩 Installed Plugins:\n${list}`);
+});
+
+cmd({
+    pattern: "eval",
+    fromMe: true,
+    desc: "Eval JavaScript code (Owner only)",
+    category: "owner",
+    filename: __filename,
+}, async (_client, _m, sock) => {
+    try {
+        let evaled = await eval(sock.q);
+        if (typeof evaled !== "string") evaled = require("util").inspect(evaled);
+        sock.reply("```" + evaled + "```");
+    } catch (err) {
+        sock.reply("```" + err + "```");
+    }
 });
