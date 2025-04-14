@@ -1,4 +1,5 @@
 const { cmd } = require('../command');
+const axios = require('axios');
 
 cmd({
     pattern: 'owner',
@@ -6,8 +7,8 @@ cmd({
     category: 'info',
     filename: __filename,
 }, async (m, sock) => {
-    const ownerNumber = '94766863255'; // ඔයාගේ number එක
-    const ownerName = 'pathum Rajapakshe'; // ඔයාගේ නම
+    const ownerNumber = '94766863255';
+    const ownerName = 'Pathum Rajapakshe';
 
     const message = `
 *👑 OWNER INFO 👑*
@@ -20,19 +21,29 @@ cmd({
 ╰───────────────◆
 
 _ඔබට ගැටලුවක් ඇත්නම් Ownerව සම්බන්ධ කරන්න._
-    `.trim();
+`.trim();
+
+    // Thumbnail එක base64 එකට convert කරන්න
+    let thumbnailBuffer;
+    try {
+        const thumbnailUrl = 'https://telegra.ph/file/ea0ae33a6e3cdb3c160dd.jpg';
+        const response = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
+        thumbnailBuffer = Buffer.from(response.data, 'binary');
+    } catch (e) {
+        thumbnailBuffer = null;
+    }
 
     await sock.sendMessage(m.chat, {
         text: message,
         contextInfo: {
             externalAdReply: {
                 title: "Contact Owner",
-                body: "Message me on WhatsApp",
-                thumbnailUrl: 'https://telegra.ph/file/ea0ae33a6e3cdb3c160dd.jpg',
-                sourceUrl: `https://wa.me/${ownerNumber}`,
+                body: "Click here to contact via WhatsApp",
                 mediaType: 1,
+                thumbnail: thumbnailBuffer,
                 renderLargerThumbnail: true,
-                showAdAttribution: true
+                showAdAttribution: true,
+                sourceUrl: `https://wa.me/${ownerNumber}`
             }
         }
     }, { quoted: m });
