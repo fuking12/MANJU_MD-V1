@@ -3,7 +3,7 @@ cmd({
     desc: 'Bot owner contact info',
     category: 'info',
     filename: __filename,
-}, async (m) => {
+}, async (client, m, sock) => {
     const ownerNumber = '94766863255';
     const ownerName = 'Pathum Rajapakshe';
 
@@ -20,7 +20,7 @@ cmd({
 _ඔබට ගැටලුවක් ඇත්නම් Ownerව සම්බන්ධ කරන්න._
 `.trim();
 
-    await m.sendMessage(m.chat, {
+    await client.sendMessage(m.chat, {
         text: caption,
         contextInfo: {
             externalAdReply: {
