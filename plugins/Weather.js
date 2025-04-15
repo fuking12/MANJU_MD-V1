@@ -1,59 +1,31 @@
-const { cmd } = require('../command');
+const fetch = require("node-fetch");
 
-cmd({
-  pattern: 'weather ?(.*)',
-  desc: 'කාලගුණය බලන්න (සිංහල ස්ථානත්)',
-  category: 'tools',
-  react: '⛅',
-  filename: __filename,
-}, async (client, message, m, extras) => {
-  let location = m[1]?.trim();
-  if (!location) location = "Colombo";
+module.exports = {
+  name: "weather",
+  description: "කාලගුණ තොරතුරු ලබාදෙන්න (API key නැතිව)",
+  type: "search",
+  pattern: ".weather",
 
-  try {
-    // Try with original location first
-    const res = await fetch(`https://wttr.in/${encodeURIComponent(location)}?format=j1`);
-    const data = await res.json();
-
-    if (!data.current_condition || !data.nearest_area) {
-      // If empty or error response, try to fallback to English Google Location Search
-      const fallbackRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
-      const fallbackData = await fallbackRes.json();
-
-      if (!fallbackData.length) {
-        return await extras.reply("❌ ඔබ ඇතුලත් කළ ස්ථානය සොයාගත නොහැක.");
-      }
-
-      const locName = fallbackData[0].display_name;
-      const fallbackWeatherRes = await fetch(`https://wttr.in/${encodeURIComponent(locName)}?format=j1`);
-      const fallbackWeatherData = await fallbackWeatherRes.json();
-
-      if (!fallbackWeatherData.current_condition || !fallbackWeatherData.nearest_area) {
-        return await extras.reply("❌ කාලගුණය ලබාගැනීමේදී දෝෂයක් හටගැණිනි.");
-      }
-
-      return await sendWeather(fallbackWeatherData, extras);
+  async onCommand(message, client, match, text) {
+    const location = text || message.quoted?.text;
+    if (!location) {
+      return await message.reply("කරුණාකර නගරයක් හෝ තැනක් දෙන්න. උදා: `.weather Colombo`");
     }
 
-    return await sendWeather(data, extras);
-  } catch (err) {
-    console.error(err);
-    return await extras.reply("⚠️ කාලගුණය ලබාගැනීමේදී දෝෂයක් ඇත. නැවත උත්සාහ කරන්න.");
+    const url = `https://wttr.in/${encodeURIComponent(location)}?format=3`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.text();
+
+      if (data.toLowerCase().includes("unknown location")) {
+        return await message.reply(`"${location}" කියන තැනක් හමු නොවුණා.`);
+      }
+
+      await message.reply(`📍 *${data.trim()}*`);
+    } catch (e) {
+      console.error(e);
+      await message.reply("කාලගුණ තොරතුරු ලබාගන්න නොහැක. ටික වෙලාවකින් උත්සහ කරන්න.");
+    }
   }
-});
-
-async function sendWeather(data, extras) {
-  const w = data.current_condition[0];
-  const area = data.nearest_area[0];
-
-  const reply = `
-╭───『 *කාලගුණ වාර්තාව* 』
-│📍 ස්ථානය: ${area.areaName[0].value}, ${area.region[0].value}
-│🌡️ උෂ්ණත්වය: ${w.temp_C}°C
-│☁️ තත්ත්වය: ${w.weatherDesc[0].value}
-│💧 ආර්ද්‍රතාවය: ${w.humidity}%
-│💨 සුළං වේගය: ${w.windspeedKmph} km/h
-╰───────────────────────`;
-
-  await extras.reply(reply);
-}
+};
