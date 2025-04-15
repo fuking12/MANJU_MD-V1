@@ -11,5 +11,25 @@ cmd({
   await extras.reply("🏓 Pong! වෙලා බලන්න...");
   const end = new Date().getTime();
   const ping = end - start;
-  await extras.reply(`✅ Bot Working Fine!\n⚡ Speed: *${ping}ms*`);
+
+  // uptime in seconds
+  const uptimeSec = process.uptime();
+  const hours = Math.floor(uptimeSec / 3600);
+  const minutes = Math.floor((uptimeSec % 3600) / 60);
+  const seconds = Math.floor(uptimeSec % 60);
+  const uptime = `${hours}h ${minutes}m ${seconds}s`;
+
+  // RAM usage
+  const memory = process.memoryUsage().rss / 1024 / 1024;
+  const ram = memory.toFixed(2);
+
+  const text = `
+╭───『 *BOT STATUS* 』
+│✅ *Bot Active & Working Fine!*
+│⚡ *Speed:* ${ping} ms
+│⏱️ *Uptime:* ${uptime}
+│💾 *RAM Usage:* ${ram} MB
+╰────────────────────`;
+
+  await extras.reply(text);
 });
