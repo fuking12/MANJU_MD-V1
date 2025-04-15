@@ -17,6 +17,8 @@ module.exports = {
   AUTO_READ_STATUS: convertToBool(process.env.AUTO_READ_STATUS || "true"),
   AUTO_BIO_STATUS: convertToBool(process.env.AUTO_BIO_STATUS || "false"),  // Auto Bio setting
   AUTO_REACT_STATUS: convertToBool(process.env.AUTO_REACT_STATUS || "false"),  // Auto React setting
+  AUTO_TYPING_STATUS: convertToBool(process.env.AUTO_TYPING_STATUS || "false"),
+  AUTO_RECORD_STATUS: convertToBool(process.env.AUTO_RECORD_STATUS || "false"),
   MODE: process.env.MODE || "public",
   
   // API key
