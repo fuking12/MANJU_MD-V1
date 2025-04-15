@@ -8,17 +8,20 @@ cmd({
   category: 'downloader',
   filename: __filename,
   use: '.yt <youtube link>',
-}, async (client, m, text) => {
-  if (!text || !text.includes('youtu')) return m.reply('කරුණාකර YouTube ලින්ක් එකක් ලබාදෙන්න. උදා: `.yt https://youtu.be/abc123`');
+}, async (client, m, info) => {
+  const text = info || m.text || ''; // Fix: Get text safely
+
+  if (!text || !text.includes('youtu')) {
+    return m.reply('කරුණාකර YouTube ලින්ක් එකක් ලබාදෙන්න. උදා: `.yt https://youtu.be/abc123`');
+  }
 
   try {
-    const info = await ytdl.getInfo(text);
-    const title = info.videoDetails.title;
-    const thumbnail = info.videoDetails.thumbnails.pop().url;
-    const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
+    const videoInfo = await ytdl.getInfo(text);
+    const title = videoInfo.videoDetails.title;
+    const thumbnail = videoInfo.videoDetails.thumbnails.pop().url;
+    const formats = ytdl.filterFormats(videoInfo.formats, 'videoandaudio');
 
     const format = formats.find(f => f.container === 'mp4' && f.hasAudio && f.hasVideo && f.qualityLabel === '360p') || formats[0];
-
     const fileSizeMB = format.contentLength ? (parseInt(format.contentLength) / 1048576).toFixed(2) : 'Unknown';
 
     if (parseFloat(fileSizeMB) > 150 && process.env.PLATFORM !== 'vps') {
