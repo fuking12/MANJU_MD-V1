@@ -1,19 +1,49 @@
+const { jidDecode } = require("baileys");
 const fs = require("fs");
-const { addCommand } = require("../lib/command");
-const configPath = "./config.js";
+const config = require("../config");
 
-addCommand({ pattern: "mode ?(.*)", fromMe: true, desc: "Set bot mode" }, async (m, match) => {
-  const input = match.trim().toLowerCase();
+module.exports = {
+  name: "mode",
+  alias: ["setmode"],
+  desc: "Set bot mode: public, private, or group-only",
+  category: "Owner",
+  usage: ".mode public / private / group",
+  react: "⚙️",
+  owner: true,
+  async exec(sock, m, args) {
+    try {
+      const jid = m.key.participant || m.key.remoteJid;
+      const decode = jidDecode(jid) || {};
+      const sender = decode.user || jid.split("@")[0];
 
-  if (!["public", "private", "group"].includes(input)) {
-    return await m.reply(`*BOT MODE:* ${require("../config").MODE.toUpperCase()}\n\n📌 *Use:*\n.mode public\n.mode private\n.mode group`);
-  }
+      if (!args[0]) {
+        return m.reply(
+          `🔁 *Current Mode:* ${config.MODE.toUpperCase()}\n\n` +
+          `Set mode using:\n` +
+          `> .mode public\n` +
+          `> .mode private\n` +
+          `> .mode group`
+        );
+      }
 
-  let configText = fs.readFileSync(configPath, "utf-8");
+      const mode = args[0].toLowerCase();
+      if (!["public", "private", "group"].includes(mode)) {
+        return m.reply("❌ Invalid mode! Use: public / private / group");
+      }
 
-  configText = configText.replace(/MODE:\s*["'](.*?)["']/, `MODE: "${input}"`);
+      // update config.js file
+      const configPath = require.resolve("../config");
+      let content = fs.readFileSync(configPath, "utf8");
+      const newContent = content.replace(
+        /MODE:.*?["'](.*?)["']/,
+        `MODE: "${mode}"`
+      );
+      fs.writeFileSync(configPath, newContent);
 
-  fs.writeFileSync(configPath, configText);
-
-  await m.reply(`✅ Bot mode updated to *${input.toUpperCase()}*\n\nPlease restart the bot to apply changes.`);
-});
+      m.reply(`✅ Bot mode updated to *${mode.toUpperCase()}* successfully!`);
+    } catch (e) {
+      console.error("Mode command error:", e);
+      m.reply("⚠️ Error occurred while updating mode.");
+    }
+  },
+};
