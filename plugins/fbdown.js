@@ -8,7 +8,7 @@ cmd(
   {
     pattern: "fb",
     alias: ["facebook"],
-    react: "💽",
+    react: "🎬",
     category: "download",
     desc: "Download Facebook videos (HD or SD) with thumbnail and extra info",
     filename: __filename,
@@ -24,16 +24,16 @@ cmd(
 
       if (!q || q.trim() === "") {
         console.log("No URL provided by user");
-        return await reply("*🎬 Please provide a valid Facebook video URL!* 🌺");
+        return await reply("*🎬 Please provide a valid Facebook video URL!* ❄️");
       }
 
       const fbRegex = /(https?:\/\/)?(www\.)?(facebook|fb|m\.facebook|fb\.watch)\.com\/(?:(?:share|videos|watch|video|reel|post|live|stories|groups)\/.+|(?:u\/\d+|user\/\d+|profile\.php\?id=\d+)|(?:photo\.php\?fbid=\d+)|(?:permalink\.php\?story_fbid=\d+&id=\d+))+/i;
       if (!fbRegex.test(q)) {
         console.log("Invalid Facebook URL provided:", q);
-        return await reply("*❌ Invalid Facebook URL! Please provide a valid link (e.g., facebook.com/videos, fb.watch, facebook.com/share, etc.).* 🌺");
+        return await reply("*❌ Invalid Facebook URL! Please provide a valid link (e.g., facebook.com/videos, fb.watch, facebook.com/share, etc.).* ❄️");
       }
 
-      await reply("*⏳ Fetching video details, please wait...* 🌺");
+      await reply("*⏳ Fetching video details, please wait...* ❄️");
 
       const apiUrl = `${API_URL}?url=${encodeURIComponent(q)}`;
       console.log("API Request URL:", apiUrl);
@@ -44,7 +44,7 @@ cmd(
 
       if (!response.data) {
         console.log("No API response received");
-        return await reply("*❌ No response from API. The service might be down. Try again later.* 🌺");
+        return await reply("*❌ No response from API. The service might be down. Try again later.* ❄️");
       }
 
       const apiStatus = response.data.status === true;
@@ -62,7 +62,7 @@ cmd(
 
       const videoData = {
         ...response.data.data,
-        @PᴏᴡᴇʀᴅBʏ: "Mᴀɴᴊᴜ_Mᴅ",
+        poweredBy: "manju md",
         status: apiStatus
       };
 
@@ -87,14 +87,14 @@ cmd(
           caption += `📌 Quality: ${videoData.quality}\n`;
         }
 
-        caption += `Pᴏᴡᴇʀᴅ Bʏ Mᴀɴᴊᴜ_Mᴅ ☣️`;
+        caption += `✅ Powered by manju_md`;
 
         if (videoData.thumbnail) {
           await robin.sendMessage(
             from,
             {
               image: { url: videoData.thumbnail },
-              caption: "*🎬 Facebook Video Thumbnail*\n⏳ Video will be sent next...* 🌺",
+              caption: "*🎬 Facebook Video Thumbnail*\n⏳ Video will be sent next...* ❄️",
             },
             { quoted: mek }
           );
@@ -110,17 +110,17 @@ cmd(
         );
       } else {
         console.log("No video URL found in response:", response.data);
-        return await reply("*❌ No video URL found in the response. The video might be private or not available.* 🌺");
+        return await reply("*❌ No video URL found in the response. The video might be private or not available.* ❄️");
       }
 
     } catch (e) {
       console.error("Error downloading FB video:", e.message, e.stack);
       if (e.code === "ECONNABORTED") {
-        return await reply("*❌ Timeout: The server took too long to respond. Please try again later.* 🌺");
+        return await reply("*❌ Timeout: The server took too long to respond. Please try again later.* ❄️");
       } else if (e.response && e.response.data) {
-        return await reply(`*❌ Error:* ${e.response.data.message || "API error occurred. Try again later."} 🌺`);
+        return await reply(`*❌ Error:* ${e.response.data.message || "API error occurred. Try again later."} ❄️`);
       } else {
-        return await reply(`*❌ Error:* ${e.message || "Something went wrong while downloading the video. Try again later."} 🌺`);
+        return await reply(`*❌ Error:* ${e.message || "Something went wrong while downloading the video. Try again later."} ❄️`);
       }
     }
   }
@@ -140,11 +140,11 @@ cmd(
   ) => {
     try {
       console.log("Button interaction received for user:", m.sender, "Button ID:", m.id);
-      await reply("*❌ This command is no longer needed. Use !fb directly with the video URL.* 🌺");
+      await reply("*❌ This command is no longer needed. Use !fb directly with the video URL.* ❄️");
 
     } catch (e) {
       console.error("Error in fb_quality command:", e.message, e.stack);
-      await reply("*❌ Error processing your request. Please try again.* 🌺");
+      await reply("*❌ Error processing your request. Please try again.* ❄️");
     }
   }
 );
