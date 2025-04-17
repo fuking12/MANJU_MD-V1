@@ -15,8 +15,8 @@ module.exports = {
   
   // Add new settings
   AUTO_READ_STATUS: convertToBool(process.env.AUTO_READ_STATUS || "true"),
-  AUTO_BIO_STATUS: convertToBool(process.env.AUTO_BIO_STATUS || "false"),  // Auto Bio setting
-  AUTO_REACT_STATUS: convertToBool(process.env.AUTO_REACT_STATUS || "false"),  // Auto React setting
+  AUTO_BIO_STATUS: convertToBool(process.env.AUTO_BIO_STATUS || "true"),  // Auto Bio setting
+  AUTO_REACT_STATUS: convertToBool(process.env.AUTO_REACT_STATUS || "true"),  // Auto React setting
   MODE: process.env.MODE || "public",
   
   // API key
