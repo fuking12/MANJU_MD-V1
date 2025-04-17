@@ -25,7 +25,7 @@ cmd({
     const result = await ddownr.download(songUrl, 'mp3'); // Download in mp3 format
     const downloadLink = result.downloadUrl; // Get the download URL
 
-    let songDetailsMessage = `*ＹＯＵＴＵＢＥ ＡＵＤＩＯ ＤＬ*\n\n`;
+    let songDetailsMessage = `*𝗬𝗢𝗨𝗧𝗨𝗕𝗘 𝗔𝗨𝗗𝗜𝗢 𝗗𝗟*\n\n`;
     songDetailsMessage += `*⚜ Title:* ${songData.title}\n`;
     songDetailsMessage += `*👀 Views:* ${songData.views}\n`;
     songDetailsMessage += `*⏰ Duration:* ${songData.timestamp}\n`;
@@ -35,7 +35,7 @@ cmd({
     songDetailsMessage += `*Choose Your Download Format:*\n\n`;
     songDetailsMessage += `1 || Audio File 🎶\n`;
     songDetailsMessage += `2 || Document File 📂\n\n`;
-    songDetailsMessage += `> ᴅᴇɴᴇᴛʜ-ᴍᴅ ʙʏ ᴋɪɴɢ X ᴅᴇɴᴇᴛʜᴅᴇᴠ®`;
+    songDetailsMessage += `> ᴍᴀɴᴊᴜ ʙʏ ᴛʜᴀʀᴜ X ᴘᴀᴛʜᴜᴍMᴀx®`;
 
     // Send the video thumbnail with song details
     const sentMessage = await messageHandler.sendMessage(from, {
@@ -64,7 +64,7 @@ cmd({
               document: { url: downloadLink },
               mimetype: 'audio/mpeg',
               fileName: `${songData.title}.mp3`,
-              caption: `${songData.title}\n\n> ᴅᴇɴᴇᴛʜ-ᴍᴅ ʙʏ ᴋɪɴɢ X ᴅᴇɴᴇᴛʜᴅᴇᴠ®`
+              caption: `${songData.title}\n\n> ᴍᴀɴᴊᴜ_ᴍᴅ ʙʏ ᴛʜᴀʀᴜ X ᴘᴀᴛʜᴜᴍMᴀx®`
             }, { quoted: quotedMessage });
             break;
           default:
