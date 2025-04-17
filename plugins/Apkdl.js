@@ -1,42 +1,29 @@
-const axios = require("axios");
+const axios = require('axios');
 
 module.exports = {
-  cmd: ['app', 'apk', 'apkdl'],
-  desc: "APK App Downloader via Ginux API",
-  category: "downloader",
-  use: "<app name>",
-  async handler(m, { text, sendMessage }) {
-    if (!text) {
-      return m.reply("ඇප් එකේ නම ලබාදෙන්න.\n\nඋදා: `.app whatsapp`");
-    }
-
+  name: 'apk',
+  alias: ['.apk'],
+  desc: 'Download Android APKs using Genux API',
+  category: 'Downloader',
+  async execute(client, m, { text, prefix, command }) {
+    if (!text) return m.reply(`පාවිච්චිය:\n${prefix}${command} whatsapp`);
     try {
-      const query = encodeURIComponent(text);
-      const url = `https://api.genux.me/api/download/apk?query=${query}&apikey=GENUX-WXSU5DK`;
+      let res = await axios.get(`https://api.genux.me/api/download/apk?query=${encodeURIComponent(text)}&apikey=GENUX-WXSU5DK`);
+      let result = res.data.result;
 
-      const res = await axios.get(url);
-      const result = res.data.result;
+      if (!result || result.length === 0) return m.reply('App එක හමු නොවීය.');
 
-      if (!result || !result.app_name) {
-        return m.reply("ඇප් එකක් හමු නොවුණා. වෙනත් නමක් ට්‍රයි කරන්න.");
-      }
+      let msg = `*📲 APK Search Result: ${text}*\n\n`;
+      result.slice(0, 5).forEach((app, i) => {
+        msg += `*${i + 1}. ${app.name}*\n`;
+        msg += `📦 Package: ${app.package}\n`;
+        msg += `📥 Download: ${app.download}\n\n`;
+      });
 
-      const msg = `*📱 APP NAME:* ${result.app_name}
-*🆔 PACKAGE:* ${result.package_name}
-*🧑‍💻 DEVELOPER:* ${result.developer}
-*🆚 VERSION:* ${result.version}
-*📦 SIZE:* ${result.size}
-*🔗 DOWNLOAD:* ${result.download_link}
-`;
-
-      await sendMessage(m.chat, {
-        image: { url: result.icon },
-        caption: msg
-      }, { quoted: m });
-
-    } catch (err) {
-      console.error("APK Plugin Error:", err);
-      m.reply("ඇප් එක ලබා ගැනීමේදී දෝෂයක් ඇතිවිය.");
+      m.reply(msg);
+    } catch (e) {
+      console.error(e);
+      m.reply('App එක download කරන්න බැරිවුණා. කරුණාකර නැවත උත්සාහ කරන්න.');
     }
   }
 };
