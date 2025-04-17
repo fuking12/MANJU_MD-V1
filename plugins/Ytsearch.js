@@ -8,7 +8,8 @@ cmd({
   category: "downloader",
   use: '.ytsearch <search term>',
   filename: __filename,
-}, async (m, sock, { q, reply }) => {
+}, async (m, sock, { args, reply }) => {
+  const q = args.join(" ");
   if (!q) return reply("කරුණාකර සෙවිය යුතු වීඩියෝවක නමක් සඳහන් කරන්න!\n\nඋදා: `.ytsearch hiru news`");
 
   const apiKey = "GENUX-WXSU5DK";
