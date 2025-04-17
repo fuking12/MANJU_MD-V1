@@ -1,29 +1,37 @@
+const { cmd } = require('../command');
 const axios = require('axios');
 
-module.exports = {
-  name: 'apk',
-  alias: ['.apk'],
-  desc: 'Download Android APKs using Genux API',
-  category: 'Downloader',
-  async execute(client, m, { text, prefix, command }) {
-    if (!text) return m.reply(`පාවිච්චිය:\n${prefix}${command} whatsapp`);
-    try {
-      let res = await axios.get(`https://api.genux.me/api/download/apk?query=${encodeURIComponent(text)}&apikey=GENUX-WXSU5DK`);
-      let result = res.data.result;
+cmd({
+  pattern: 'apk',
+  desc: 'App download from Genux',
+  category: 'downloader',
+  filename: __filename
+}, async (client, message, m, { q, reply }) => {
+  if (!q) return reply('කරුණාකර app එකක් සෙවීමට නමක් ලබාදෙන්න.\n\nඋදාහරණයක්: *.apk whatsapp*');
 
-      if (!result || result.length === 0) return m.reply('App එක හමු නොවීය.');
+  try {
+    const apiKey = 'GENUX-WXSU5DK'; // ඔබේ Genux API Key එක
+    const url = `https://api.genux.me/api/download/apk?query=${encodeURIComponent(q)}&apikey=${apiKey}`;
+    const res = await axios.get(url);
 
-      let msg = `*📲 APK Search Result: ${text}*\n\n`;
-      result.slice(0, 5).forEach((app, i) => {
-        msg += `*${i + 1}. ${app.name}*\n`;
-        msg += `📦 Package: ${app.package}\n`;
-        msg += `📥 Download: ${app.download}\n\n`;
-      });
-
-      m.reply(msg);
-    } catch (e) {
-      console.error(e);
-      m.reply('App එක download කරන්න බැරිවුණා. කරුණාකර නැවත උත්සාහ කරන්න.');
+    if (!res.data || !res.data.status || !res.data.result || res.data.result.length === 0) {
+      return reply('App එක සොයාගත නොහැක.');
     }
+
+    const app = res.data.result[0];
+    const caption = `*📱 App Name:* ${app.name}
+*🧑‍💻 Developer:* ${app.developer}
+*🧮 Version:* ${app.version}
+*🧷 Size:* ${app.size}
+*⬇️ Downloads:* ${app.downloads}
+*🔗 Link:* ${app.downloadLink}`;
+
+    await client.sendMessage(m.chat, {
+      image: { url: app.icon },
+      caption
+    }, { quoted: m });
+  } catch (err) {
+    console.log(err);
+    reply('මට දැන් මේ app එක ලබාගන්න බෑ. ටිකක් විතරකින් නැවත උත්සහ කරන්න.');
   }
-};
+});
