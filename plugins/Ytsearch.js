@@ -6,34 +6,42 @@ cmd({
   alias: ["yts"],
   desc: "YouTube වීඩියෝ සෙවීම",
   category: "downloader",
-  use: '.ytsearch <search term>',
+  use: '.ytsearch <video name>',
   filename: __filename,
 }, async (m, sock, { args, reply }) => {
-  const q = args.join(" ");
-  if (!q) return reply("කරුණාකර සෙවිය යුතු වීඩියෝවක නමක් සඳහන් කරන්න!\n\nඋදා: `.ytsearch hiru news`");
+  const query = args.join(" ");
+  if (!query) {
+    return reply(
+      "කරුණාකර සෙවිය යුතු වීඩියෝවක නමක් සඳහන් කරන්න!\n\n" +
+      "උදා: `.ytsearch hiru news`"
+    );
+  }
 
   const apiKey = "GENUX-WXSU5DK";
-  const url = `https://api.genux.me/api/search/yt-search?query=${encodeURIComponent(q)}&apikey=${apiKey}`;
+  const apiUrl = `https://api.genux.me/api/search/yt-search?query=${encodeURIComponent(query)}&apikey=${apiKey}`;
 
   try {
-    const { data } = await axios.get(url);
+    const res = await axios.get(apiUrl);
 
-    if (!data || !data.result || data.result.length === 0) {
-      return reply("කිසිදු වීඩියෝවක් හමු නොවුණා!");
+    // Check if response and data is valid
+    if (!res || !res.data || !res.data.result || res.data.result.length === 0) {
+      return reply("සෙවුමට ගැලපෙන කිසිවක් හමු නොවුණා.");
     }
 
-    let responseText = `🔎 *YouTube සෙවුම් ප්‍රතිඵල*\n\n`;
+    const results = res.data.result.slice(0, 5); // First 5 results
+    let text = `🔎 *YouTube සෙවුම් ප්‍රතිඵල*\n\n`;
 
-    data.result.slice(0, 5).forEach((vid, i) => {
-      responseText += `*${i + 1}. ${vid.title}*\n`;
-      responseText += `📺 නාලිකාව: ${vid.channel.name}\n`;
-      responseText += `⏱ දිග: ${vid.duration}\n`;
-      responseText += `🔗 https://youtu.be/${vid.videoId}\n\n`;
+    results.forEach((video, index) => {
+      text += `*${index + 1}. ${video.title}*\n`;
+      text += `📺 නාලිකාව: ${video.channel.name}\n`;
+      text += `⏱️ දිග: ${video.duration}\n`;
+      text += `🔗 https://youtu.be/${video.videoId}\n\n`;
     });
 
-    reply(responseText);
-  } catch (err) {
-    console.error("YT Search Error:", err);
-    reply("කණගාටුයි, YouTube සෙවීමේදී දෝෂයක් සිදුවුණා!");
+    reply(text);
+
+  } catch (error) {
+    console.error("YTSearch Error:", error.message);
+    reply("කණගාටුයි! සෙවුමක් කරන්න නොහැකි වුණා. කරුණාකර පසුව උත්සාහ කරන්න.");
   }
 });
