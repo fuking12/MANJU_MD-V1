@@ -15,7 +15,7 @@ async (conn, mek, m, { from, quoted, body, q, reply }) => {
     const searchTerm = q.trim();
     if (!searchTerm) return reply(`𝖯𝗅𝖾𝖺𝗌𝖾 𝖯𝗋𝗈𝗏𝗂𝖽𝖾 𝖺 𝖲𝖾𝖺𝗋𝖼𝗁 𝖳𝖾𝗋𝗆`);
 
-    reply(`𝖲𝖾𝖺𝗋𝖼𝗁𝗂𝗇𝗀 𝖥𝗈𝗋 𝖸𝗈𝗎𝗋 𝖵𝗂𝖽𝖾𝗈 𝗂𝗇 𝖲𝖺𝗁𝖺𝗌-𝖬𝖣 𝖶𝖠 𝖡𝖮𝖳 ➤...`);
+    reply(`𝗦𝗘𝗔𝗥𝗖𝗛𝗜𝗡𝗚 𝗙𝗢𝗥 𝗬𝗢𝗨𝗥 𝗩𝗜𝗗𝗘𝗢 𝗜𝗡 𝗠𝗔𝗡𝗝𝗨_𝗠𝗗 𝗪𝗔 𝗕𝗢𝗧 ➤...`);
     try {
         // Search for the video and download
         const videoInfo = await xnxx.download(searchTerm);
@@ -23,11 +23,11 @@ async (conn, mek, m, { from, quoted, body, q, reply }) => {
             return await conn.sendMessage(from, { react: { text: '❌', key: mek.key } });
         }
 
-        reply(`𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖵𝗂𝖽𝖾𝗈 𝖯𝗅𝖾𝖺𝗌𝖾 𝖶𝖺𝗂𝗍 ➤...`);
+        reply(`𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗜𝗡𝗚 𝗩𝗜𝗗𝗘𝗢 𝗣𝗟𝗘𝗔𝗦𝗘 𝗪𝗔𝗜𝗧 ➤...`);
         const videoUrl = videoInfo.link_dl;
         await conn.sendMessage(
             from,
-            { video: { url: videoUrl }, caption: '> *©ᴘᴏᴡᴇʀᴇᴅ ʙʏ ꜱᴀʜᴀꜱ ᴛᴇᴄʜ*', mimetype: 'video/mp4' }, 
+            { video: { url: videoUrl }, caption: '> *©ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴍᴀɴᴊᴜ_ᴍᴅ*', mimetype: 'video/mp4' }, 
             { quoted: mek }
         )
 
