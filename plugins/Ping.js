@@ -8,7 +8,7 @@ cmd({
   filename: __filename,
 }, async (client, message, m, extras) => {
   const start = new Date().getTime();
-  await extras.reply("🏓 Pong! වෙලා බලන්න...");
+  await extras.reply("🏓 Pinging...");
   const end = new Date().getTime();
   const ping = end - start;
 
@@ -24,7 +24,7 @@ cmd({
   const ram = memory.toFixed(2);
 
   const text = `
-╭───『 *BOT STATUS* 』
+╭───『 *Mᴀɴᴊᴜ_ᴍᴅ Sᴛᴀᴛᴜs* 』
 │✅ *Bot Active & Working Fine!*
 │⚡ *Speed:* ${ping} ms
 │⏱️ *Uptime:* ${uptime}
