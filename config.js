@@ -20,5 +20,5 @@ module.exports = {
   MODE: process.env.MODE || "public",
   
   // API key
-  API_KEY: process.env.API_KEY || "sky|e6ad5555ee53b73644770beab633855c2f646a77",
+  API_KEY: process.env.API_KEY || "sky|2483faa7f5630311464123d017fc7acc2aec6da0",
 };
