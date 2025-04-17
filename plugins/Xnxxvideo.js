@@ -1,4 +1,5 @@
-const axios = require("axios");
+const axios = require("axios"),
+const { cmd } = require("../command.js");
 
 module.exports = {
   cmd: ['xnxx'],
