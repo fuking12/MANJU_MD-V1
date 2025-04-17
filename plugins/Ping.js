@@ -24,7 +24,7 @@ cmd({
   const ram = memory.toFixed(2);
 
   const text = `
-╭───『 *Mᴀɴᴊᴜ_ᴍᴅ Sᴛᴀᴛᴜs* 』
+╭───『*Sʏsᴛᴇᴍ Sᴛᴀᴛᴜs*』
 │✅ *Bot Active & Working Fine!*
 │⚡ *Speed:* ${ping} ms
 │⏱️ *Uptime:* ${uptime}
