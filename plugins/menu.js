@@ -1,4 +1,4 @@
-const { cmd, commands } = require("../command");
+ඡචඡගconst { cmd, commands } = require("../command");
 const config = require('../config');
 
 cmd(
@@ -92,7 +92,7 @@ ${menu.search}
         from,
         {
           image: {
-            url: "https://raw.githubusercontent.com/Dark-Robin/Bot-Helper/refs/heads/main/autoimage/Bot%20robin%20menu.jpg",
+            url: "https://raw.githubusercontent.com/Manju362/Link-gamu./refs/heads/main/IMG-20250417-WA0191.jpg",
           },
           caption: madeMenu,
         },
