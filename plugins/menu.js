@@ -4,7 +4,7 @@ const config = require('../config');
 cmd(
   {
     pattern: "menu",
-    alise: ["getmenu"],
+    alias: ["getmenu"],
     react: '💋',
     desc: "get cmd list",
     category: "main",
@@ -49,45 +49,55 @@ cmd(
         search: "",
       };
 
-      for (let i = 0; i < commands.length; i++) {
-        if (commands[i].pattern && !commands[i].dontAddCommandList) {
-          menu[
-            commands[i].category
-          ] += `${config.PREFIX}${commands[i].pattern}\n`;
-        }
-      }
+      for (let i = 0; i < commands.length; i++) {  
+        if (commands[i].pattern && !commands[i].dontAddCommandList) {  
+          menu[  
+            commands[i].category  
+          ] += `${config.PREFIX}${commands[i].pattern}\n`;  
+        }  
+      }  
 
-      let madeMenu = `👋 *Hello  ${pushname}*
+      let madeMenu = `
+   HELLO ${pushname} 👋 
+┣━━━━━━━━━━━━━━━━━━━━┫
+┃  MANJU_MD • BOT MENU   ┃
+┗━━━━━━━━━━━━━━━━━━━━┛
 
+╭─➤ ⚙️ *Main Commands*  
+│  ▸ .alive – Bot status  
+│  ▸ .menu – Show all commands  
+│  ▸ .ai <text> – Chat with AI  
+│  ▸ .system – System information  
+│  ▸ .owner – Contact owner  
+╰────────────────────────
 
-| *MᴀɪN CᴏᴍMᴀɴDs* |
-    ▫️.alive
-    ▫️.menu
-    ▫️.ai <text>
-    ▫️.system
-    ▫️.owner
-| *DᴏWɴLᴏAᴅ CᴏᴍMᴀɴDs* |
-    ▫️.song <text>
-    ▫️.video <text>
-    ▫️.fb <link>
-| *GʀOᴜP CᴏᴍMᴀɴDs* |
-${menu.group}
-| *OᴡᴇNᴇʀ CᴏᴍMᴀɴDs* |
-    ▫️.restart
-    ▫️.update
-| *CᴏɴVᴇʀᴛ CᴏᴍMᴀɴDs* |
-    ▫️.sticker <reply img>
-    ▫️.img <reply sticker>
-    ▫️.tr <lang><text>
-    ▫️.tts <text>
-| *SᴇᴀRᴄH CᴏᴍMᴀɴDs* |
-${menu.search}
+╭─➤ ⬇️ *Download Commands*  
+│  ▸ .song <text> – Download audio  
+│  ▸ .video <text> – Download YouTube video  
+│  ▸ .fb <link> – Facebook video downloader  
+╰─────────────────────────────
 
+╭─➤ 🛠️ *Convert Commands*  
+│  ▸ .sticker – Image to sticker  
+│  ▸ .img – Sticker to image  
+│  ▸ .tts <text> – Text to speech  
+│  ▸ .tr <lang> <text> – Translate text  
+╰──────────────────────────────
 
-𝐌𝐀𝐃𝐄 𝐁𝐘 𝐏𝐀𝐓𝐇𝐔𝐌 𝐑𝐀𝐉𝐀𝐏𝐀𝐊𝐒𝐇𝐄
+╭─➤ 🔍 *Search Commands*  
+│  ▸ .img <query> – Search image  
+╰─────────────────────────────
 
-> ↪️𝙈𝘼𝙉𝙅𝙐 𝙈𝙀𝙉𝙐 𝙈𝙎𝙂 ↩️
+╭─➤ 👑 *Owner Commands*  
+│  ▸ .restart – Restart bot  
+│  ▸ .update – Check for updates  
+╰────────────────────────────
+
+┏━━━━━━━━━━━━━━━━━━━━━━━┓
+┃     Powered by: Tharu × PATHUM     ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━┛
 `;
+
       await robin.sendMessage(
         from,
         {
