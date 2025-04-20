@@ -2,7 +2,6 @@ const { fetchJson } = require('../lib/functions');
 const config = require('../config');
 const { cmd } = require('../command');
 const { SinhalaSub } = require('@sl-code-lords/movie-api');
-const { PixaldrainDL } = require("pixaldrain-sinhalasub");
 const cheerio = require('cheerio');
 const axios = require('axios');
 const fs = require('fs');
