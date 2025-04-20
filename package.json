@@ -40,7 +40,8 @@
     "ytdl-core": "^4.11.5",
     "yt-dlp-exec": "^1.0.2",
     "cheerio": "^1.0.0-rc.12",
-    "@sl-code-lords/movie-api": "^1.0.0"
+    "@sl-code-lords/movie-api": "^1.0.0",
+    "@dark-yasiya/scrap": "^1.0.1"
     
 
   }
