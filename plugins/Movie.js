@@ -50,7 +50,6 @@ cmd({
     let searchData = searchCache.get(cacheKey);
 
     if (!searchData) {
-      // Fetch from API if not cached
       const searchUrl = `https://apis.davidcyriltech.my.id/movies/search?query=${encodeURIComponent(q)}`;
       const searchResponse = await axios.get(searchUrl, { timeout: 3000 });
       searchData = searchResponse.data;
@@ -59,7 +58,6 @@ cmd({
         throw new Error("No cinematic treasures found in the ice kingdom");
       }
 
-      // Cache the results
       searchCache.set(cacheKey, searchData);
     }
 
@@ -122,7 +120,6 @@ cmd({
       const downloadLinks = [];
       const allLinks = downloadData.movie.download_links;
 
-      // Find SD (480p)
       const sdLink = allLinks.find(link => link.quality === "SD 480p");
       if (sdLink) {
         downloadLinks.push({
@@ -133,7 +130,6 @@ cmd({
         });
       }
 
-      // Find HD (prefer 720p, else 1080p)
       let hdLink = allLinks.find(link => link.quality === "HD 720p");
       if (!hdLink) {
         hdLink = allLinks.find(link => link.quality === "FHD 1080p");
@@ -151,29 +147,44 @@ cmd({
         throw new Error("No SD or HD quality available in the ice vaults");
       }
 
-      // Format download options
-      let downloadOptions = `${frozenTheme.resultEmojis[3]} *${selectedMovie.title}*\n\n`;
-      downloadOptions += `${frozenTheme.resultEmojis[4]} *Select Your Quality*:\n\n`;
-      downloadLinks.forEach(link => {
-        downloadOptions += `${frozenTheme.resultEmojis[0]} ${link.number}. *${link.quality}* (${link.size})\n`;
-      });
-      downloadOptions += `\n${frozenTheme.resultEmojis[8]} Reply with the number to claim your treasure\n`;
-      downloadOptions += `${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`;
+      // Function to send quality options
+      const sendQualityOptions = async (quotedMessage) => {
+        let downloadOptions = `${frozenTheme.resultEmojis[3]} *${selectedMovie.title}*\n\n`;
+        downloadOptions += `${frozenTheme.resultEmojis[4]} *Select Your Quality*:\n\n`;
+        downloadLinks.forEach(link => {
+          downloadOptions += `${frozenTheme.resultEmojis[0]} ${link.number}. *${link.quality}* (${link.size})\n`;
+        });
+        downloadOptions += `\n${frozenTheme.resultEmojis[8]} Reply with the number to claim your treasure\n`;
+        downloadOptions += `${frozenTheme.resultEmojis[7]} Reply 'done' to finish\n`;
+        downloadOptions += `${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`;
 
-      // Send download options with movie thumbnail
-      const downloadMessage = await conn.sendMessage(from, {
-        image: { url: downloadData.movie.thumbnail || selectedMovie.image || "https://i.ibb.co/5Yb4VZy/snowflake.jpg" },
-        caption: frozenTheme.box("ROYAL VAULT", downloadOptions),
-        ...frozenTheme.getForwardProps()
-      }, { quoted: message });
+        return await conn.sendMessage(from, {
+          image: { url: downloadData.movie.thumbnail || selectedMovie.image || "https://i.ibb.co/5Yb4VZy/snowflake.jpg" },
+          caption: frozenTheme.box("ROYAL VAULT", downloadOptions),
+          ...frozenTheme.getForwardProps()
+        }, { quoted: quotedMessage });
+      };
+
+      // Send initial quality options
+      let downloadMessage = await sendQualityOptions(message);
 
       // Step 4: Listen for quality selection
       conn.ev.on("messages.upsert", async (updateQuality) => {
         const qualityMessage = updateQuality.messages[0];
         if (!qualityMessage.message || !qualityMessage.message.extendedTextMessage) return;
 
-        const qualityReply = qualityMessage.message.extendedTextMessage.text.trim();
+        const qualityReply = qualityMessage.message.extendedTextMessage.text.trim().toLowerCase();
         if (qualityMessage.message.extendedTextMessage.contextInfo.stanzaId !== downloadMessage.key.id) return;
+
+        // Check if user wants to exit
+        if (qualityReply === 'done') {
+          await conn.sendMessage(from, {
+            text: frozenTheme.box("ROYAL FAREWELL", 
+              `❅ Your cinematic quest concludes!\n❅ Return to the ice kingdom anytime\n❅ FROZEN-QUEEN BY MR.Chathura`),
+            ...frozenTheme.getForwardProps()
+          }, { quoted: qualityMessage });
+          return;
+        }
 
         const selectedQualityNumber = parseInt(qualityReply);
         const selectedLink = downloadLinks.find(link => link.number === selectedQualityNumber);
@@ -181,33 +192,44 @@ cmd({
         if (!selectedLink) {
           await conn.sendMessage(from, {
             text: frozenTheme.box("FROZEN WARNING", 
-              "❅ Invalid decree!\n❅ Choose a valid quality number\n❅ The snowgies are bewildered"),
+              `❅ Invalid decree!\n❅ Choose a valid quality number or 'done'\n❅ The snowgies are bewildered`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
           return;
         }
 
-        // Step 5: Check file size and send movie file as document
+        // Step 5: Send movie file as document with error handling
         const sizeInGB = parseFloat(selectedLink.size);
-        if (sizeInGB > 2) {
+        if (sizeInGB > 1.5) {
           await conn.sendMessage(from, {
             text: frozenTheme.box("ICE WARNING", 
               `❅ Treasure too grand (${selectedLink.size})!\n❅ Download directly: ${selectedLink.url}\n❅ Choose a smaller quality for delivery`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
-          return;
+        } else {
+          try {
+            await conn.sendMessage(from, {
+              document: { url: selectedLink.url },
+              mimetype: "video/mp4",
+              fileName: `${selectedMovie.title} - ${selectedLink.quality}.mp4`,
+              caption: frozenTheme.box("CINEMATIC TREASURE", 
+                `${frozenTheme.resultEmojis[3]} *${selectedMovie.title}*\n${frozenTheme.resultEmojis[4]} Quality: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} Size: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} Your treasure shines in the ice kingdom!\n${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`),
+              ...frozenTheme.getForwardProps()
+            }, { quoted: qualityMessage });
+          } catch (uploadError) {
+            console.error("Upload Error:", uploadError);
+            await conn.sendMessage(from, {
+              text: frozenTheme.box("ICE STORM", 
+                `❅ Failed to deliver treasure!\n❅ Download directly: ${selectedLink.url}\n❅ Try another quality or check your connection`),
+              ...frozenTheme.getForwardProps()
+            }, { quoted: qualityMessage });
+          }
         }
 
-        await conn.sendMessage(from, {
-          document: { url: selectedLink.url },
-          mimetype: "video/mp4",
-          fileName: `${selectedMovie.title} - ${selectedLink.quality}.mp4`,
-          caption: frozenTheme.box("CINEMATIC TREASURE", 
-            `${frozenTheme.resultEmojis[3]} *${selectedMovie.title}*\n${frozenTheme.resultEmojis[4]} Quality: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} Size: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} Your treasure shines in the ice kingdom!\n${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`),
-          ...frozenTheme.getForwardProps()
-        }, { quoted: qualityMessage });
-
         await conn.sendMessage(from, { react: { text: frozenTheme.resultEmojis[0], key: qualityMessage.key } });
+
+        // Resend quality options for multiple downloads
+        downloadMessage = await sendQualityOptions(qualityMessage);
       });
     });
 
