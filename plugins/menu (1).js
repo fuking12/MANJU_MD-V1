@@ -67,8 +67,9 @@ cmd(
 │  ▸ .alive – Bot status  
 │  ▸ .menu – Show all commands  
 │  ▸ .ai <text> – Chat with AI  
-│  ▸ .system – System information     ▸ .ping – Bot connection status
-│  ▸ .owner – Contact owner  
+│  ▸ .system – System information     
+│  ▸ .owner – Contact owner 
+   ▸ .ping – Bot connection status
 ╰────────────────────────
 
 ╭─➤ ⬇️ *Download Commands*  
@@ -78,6 +79,16 @@ cmd(
 │  ▸ .fb <link> – video down....
    ▸ .tiktok <link> – video down..
 ╰─────────────────────────────
+
+╭─➤ 🎥 *Movie Commands*  
+│  ▸ .film <search> sinhalasub Movies
+│  ▸ .movie <film name> skymantion movies
+╰────────────────────────────
+
+╭─➤ 🔞 *18+ Commands*  
+│  ▸ .xnxx {Your 18+? go+ <name>
+│  ▸ .xnxxsearch <Mia ?>
+╰────────────────────────────
 
 ╭─➤ 🛠️ *Convert Commands*  
 │  ▸ .sticker – Image to sticker  
