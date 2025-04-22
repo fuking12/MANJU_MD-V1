@@ -185,7 +185,6 @@ cmd({
 
       // Anime බාගත කිරීමේ ලින්ක් format කිරීම
       let downloadOptions = `${frozenTheme.resultEmojis[3]} *${selectedAnime.title}*\n\n`;
-      downloadOptions += `${frozenTheme.resultEmojis[4]} *බාගත කිරීමේ විකල්ප*:\n\n`;
       const downloadLinks = (detailData.data.download_links || []).map((link, index) => ({
         number: index + 1,
         quality: link.quality || "Unknown Quality",
@@ -194,9 +193,21 @@ cmd({
 
       if (downloadLinks.length === 0) {
         console.log("No download links found in response:", detailData);
-        throw new Error("බාගත කිරීමේ ලින්ක් නොමැත");
+        downloadOptions += `${frozenTheme.resultEmojis[4]} *බාගත කිරීමේ විකල්ප*:\n\n`;
+        downloadOptions += `❅ බාගත කිරීමේ ලින්ක් නොමැත\n`;
+        downloadOptions += `❅ වෙනත් Anime එකක් තෝරන්න\n`;
+        downloadOptions += `❅ වැඩි විස්තර: ${selectedAnime.url}\n\n`;
+        downloadOptions += `${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`;
+
+        await conn.sendMessage(from, {
+          image: { url: detailData.data.thumbnail || selectedAnime.image },
+          caption: frozenTheme.box("රාජකීය භාණ්ඩාගාරය", downloadOptions),
+          ...frozenTheme.getForwardProps()
+        }, { quoted: message });
+        return; // Stop further processing since no download links are available
       }
 
+      downloadOptions += `${frozenTheme.resultEmojis[4]} *බාගත කිරීමේ විකල්ප*:\n\n`;
       downloadLinks.forEach(link => {
         downloadOptions += `${frozenTheme.resultEmojis[0]} ${link.number}. *${link.quality}*\n`;
       });
