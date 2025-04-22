@@ -33,13 +33,12 @@ const frozenTheme = {
 
 // Film සෙවුම් සහ ඩවුන්ලෝඩ් command එක
 cmd({
-  pattern: "film", // Pattern එක "film" ලෙස වෙනස් කර ඇත
+  pattern: "film",
   react: "❄️",
   desc: "සිනමා රස විඳීමට Frozen Queen ගේ භාණ්ඩාගාරයෙන් චිත්‍රපට ලබා ගන්න",
   category: "ice kingdom",
   filename: __filename,
 }, async (conn, mek, m, { from, q, pushname, reply }) => {
-  // චිත්‍රපටයේ නමක් ලබාදී තිබේදැයි පරීක්ෂා කිරීම
   if (!q) {
     return reply(frozenTheme.box("රාජකීය නියෝගය", 
       "❅ භාවිතය: .film <චිත්‍රපට නම>\n❅ උදා: .film Deadpool\n❅ බැඳුම්: Ice Vaults හි චිත්‍රපට භාණ්ඩ"));
@@ -51,9 +50,8 @@ cmd({
     let searchData = searchCache.get(cacheKey);
 
     if (!searchData) {
-      // Cache එකේ නැත්නම් API එකෙන් තොරතුරු ලබා ගැනීම
       const searchUrl = `https://apis.davidcyriltech.my.id/movies/search?query=${encodeURIComponent(q)}`;
-      let retries = 3; // උත්සාහ 3ක් කරනවා
+      let retries = 3;
       while (retries > 0) {
         try {
           const searchResponse = await axios.get(searchUrl, { timeout: 5000 });
@@ -62,7 +60,7 @@ cmd({
         } catch (error) {
           retries--;
           if (retries === 0) throw new Error("චිත්‍රපට භාණ්ඩාගාරයෙන් තොරතුරු ලබා ගැනීම අසාර්ථකයි");
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1s බලා යළි උත්සාහ කරනවා
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
@@ -70,7 +68,6 @@ cmd({
         throw new Error("Ice Kingdom හි චිත්‍රපට කිසිවක් හමු නොවීය");
       }
 
-      // තොරතුරු cache එකට එකතු කිරීම
       searchCache.set(cacheKey, searchData);
     }
 
@@ -93,15 +90,14 @@ cmd({
     filmList += `${frozenTheme.resultEmojis[8]} චිත්‍රපටය තෝරන්න: අංකය රිප්ලයි කරන්න\n`;
     filmList += `${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`;
 
-    // චිත්‍රපට ලැයිස්තුව එවීම (පළමු චිත්‍රපටයේ thumbnail සමඟ)
     const sentMessage = await conn.sendMessage(from, {
       image: { url: films[0].image },
       caption: frozenTheme.box("සිනමා ගවේෂණය", filmList),
       ...frozenTheme.getForwardProps()
     }, { quoted: mek });
 
-    // Step 3: චිත්‍රපට තේරීම බලා සිටීම
-    conn.ev.on("messages.upsert", async (update) => {
+    // Step 3: චිත්‍රපට තේරීම බලා සිටීම (Single Event Listener)
+    const filmSelectionHandler = async (update) => {
       const message = update.messages[0];
       if (!message.message || !message.message.extendedTextMessage) return;
 
@@ -119,6 +115,9 @@ cmd({
         }, { quoted: message });
         return;
       }
+
+      // Remove film selection listener to prevent multiple listeners
+      conn.ev.off("messages.upsert", filmSelectionHandler);
 
       // Step 4: ඩවුන්ලෝඩ් ලින්ක් ලබා ගැනීම
       const downloadUrl = `https://apis.davidcyriltech.my.id/movies/download?url=${encodeURIComponent(selectedFilm.link)}`;
@@ -141,11 +140,9 @@ cmd({
         throw new Error("Ice Vaults හි ඩවුන්ලෝඩ් ලින්ක් නැත");
       }
 
-      // SD (480p) සහ HD (720p හෝ 1080p) ලින්ක් filter කිරීම
       const downloadLinks = [];
       const allLinks = downloadData.movie.download_links;
 
-      // SD (480p) ලින්ක් validate කිරීම
       const sdLink = allLinks.find(link => link.quality === "SD 480p" && link.direct_download);
       if (sdLink) {
         downloadLinks.push({
@@ -156,7 +153,6 @@ cmd({
         });
       }
 
-      // HD (720p හෝ 1080p) ලින්ක් validate කිරීම
       let hdLink = allLinks.find(link => link.quality === "HD 720p" && link.direct_download);
       if (!hdLink) {
         hdLink = allLinks.find(link => link.quality === "FHD 1080p" && link.direct_download);
@@ -174,7 +170,6 @@ cmd({
         throw new Error("SD හෝ HD ගුණාත්මක ලින්ක් නොමැත");
       }
 
-      // ඩවුන්ලෝඩ් විකල්ප format කිරීම
       let downloadOptions = `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n\n`;
       downloadOptions += `${frozenTheme.resultEmojis[4]} *ගුණාත්මකභාවය තෝරන්න*:\n\n`;
       downloadLinks.forEach(link => {
@@ -183,15 +178,14 @@ cmd({
       downloadOptions += `\n${frozenTheme.resultEmojis[8]} ගුණාත්මකභාවය තෝරන්න: අංකය රිප්ලයි කරන්න\n`;
       downloadOptions += `${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`;
 
-      // ඩවුන්ලෝඩ් විකල්ප එවීම
       const downloadMessage = await conn.sendMessage(from, {
         image: { url: downloadData.movie.thumbnail || selectedFilm.image || "https://i.ibb.co/5Yb4VZy/snowflake.jpg" },
         caption: frozenTheme.box("රාජකීය භාණ්ඩාගාරය", downloadOptions),
         ...frozenTheme.getForwardProps()
       }, { quoted: message });
 
-      // Step 5: ගුණාත්මකභාවය තේරීම බලා සිටීම
-      conn.ev.on("messages.upsert", async (updateQuality) => {
+      // Step 5: ගුණාත්මකභාවය තේරීම බලා සිටීම (Single Event Listener)
+      const qualitySelectionHandler = async (updateQuality) => {
         const qualityMessage = updateQuality.messages[0];
         if (!qualityMessage.message || !qualityMessage.message.extendedTextMessage) return;
 
@@ -210,8 +204,18 @@ cmd({
           return;
         }
 
+        // Remove quality selection listener to prevent multiple listeners
+        conn.ev.off("messages.upsert", qualitySelectionHandler);
+
         // Step 6: ගොනුවේ ප්‍රමාණය පරීක්ෂා කිරීම
-        const sizeInGB = parseFloat(selectedLink.size);
+        const sizeStr = selectedLink.size.toLowerCase();
+        let sizeInGB = 0;
+        if (sizeStr.includes("gb")) {
+          sizeInGB = parseFloat(sizeStr.replace("gb", "").trim());
+        } else if (sizeStr.includes("mb")) {
+          sizeInGB = parseFloat(sizeStr.replace("mb", "").trim()) / 1024;
+        }
+
         if (sizeInGB > 2) {
           await conn.sendMessage(from, {
             text: frozenTheme.box("ICE අවවාදය", 
@@ -222,18 +226,32 @@ cmd({
         }
 
         // Step 7: චිත්‍රපටය ලේඛනයක් ලෙස එවීම
-        await conn.sendMessage(from, {
-          document: { url: selectedLink.url },
-          mimetype: "video/mp4",
-          fileName: `${selectedFilm.title} - ${selectedLink.quality}.mp4`,
-          caption: frozenTheme.box("සිනමා භාණ්ඩය", 
-            `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n${frozenTheme.resultEmojis[4]} ගුණාත්මකභාවය: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} ප්‍රමාණය: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} ඔබේ භාණ්ඩය Ice Kingdom හි බැබලේ!\n${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`),
-          ...frozenTheme.getForwardProps()
-        }, { quoted: qualityMessage });
+        try {
+          await conn.sendMessage(from, {
+            document: { url: selectedLink.url },
+            mimetype: "video/mp4",
+            fileName: `${selectedFilm.title} - ${selectedLink.quality}.mp4`,
+            caption: frozenTheme.box("සිනමා භාණ්ඩය", 
+              `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n${frozenTheme.resultEmojis[4]} ගුණාත්මකභාවය: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} ප්‍රමාණය: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} ඔබේ භාණ්ඩය Ice Kingdom හි බැබලේ!\n${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`),
+            ...frozenTheme.getForwardProps()
+          }, { quoted: qualityMessage });
 
-        await conn.sendMessage(from, { react: { text: frozenTheme.resultEmojis[0], key: qualityMessage.key } });
-      });
-    });
+          await conn.sendMessage(from, { react: { text: frozenTheme.resultEmojis[0], key: qualityMessage.key } });
+        } catch (downloadError) {
+          await conn.sendMessage(from, {
+            text: frozenTheme.box("ICE අවවාදය", 
+              `❅ ඩවුන්ලෝඩ් කිරීමේ දෝෂයකි: ${downloadError.message}\n❅ සෘජුව බාගන්න: ${selectedLink.url}\n❅ නැවත උත්සාහ කරන්න`),
+            ...frozenTheme.getForwardProps()
+          }, { quoted: qualityMessage });
+        }
+      };
+
+      // Register quality selection listener
+      conn.ev.on("messages.upsert", qualitySelectionHandler);
+    };
+
+    // Register film selection listener
+    conn.ev.on("messages.upsert", filmSelectionHandler);
 
   } catch (e) {
     console.error("දෝෂය:", e);
