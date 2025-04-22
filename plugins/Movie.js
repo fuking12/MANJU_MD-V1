@@ -131,8 +131,7 @@ conn.ev.on("messages.upsert", async (update) => {
     return;
   }
 
-  // ඉතිරි කෝඩ් එක එහෙමම තියෙන්න ඕන...
-});
+  // ඉතිරි කෝඩ් එක එහෙමම තියෙන්න ඕන...                                                               }
 
         // Step 3: Fetch download links
         const downloadUrl = `https://apis.davidcyriltech.my.id/movies/download?url=${encodeURIComponent(selectedMovie.link)}`;
