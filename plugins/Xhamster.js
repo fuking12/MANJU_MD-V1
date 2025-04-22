@@ -65,7 +65,24 @@ cmd(
       console.log("API Request:", API_URL);
 
       const response = await fetch(API_URL);
-      const result = await response.json();
+      
+      // Check HTTP status code
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log("API Error Response (Text):", errorText);
+        return reply(frozenTheme.box("FROZEN STORM",
+          `┊ 🔞 Error: API request failed (Status: ${response.status})\n┊ 🔞 Message: ${errorText || "Unknown error"}\n┊ 🔞 The API might be down or rate-limited`));
+      }
+
+      // Try to parse the response as JSON
+      let result;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        const responseText = await response.text();
+        console.log("API Response (Text):", responseText);
+        throw new Error(`Failed to parse API response as JSON: ${responseText}`);
+      }
 
       console.log("API Response:", result);
       // Log the video array to see its content
@@ -126,7 +143,7 @@ cmd(
       }, { quoted: mek });
 
     } catch (e) {
-      console.error("Error in XHamster Command:", e);
+      console.error("Error in XHamster Command:", e.message);
       reply(frozenTheme.box("FROZEN STORM",
         `┊ 🔞 Error: ${e.message || "Something went wrong"}\n┊ 🔞 The ice magic failed this time`));
     }
