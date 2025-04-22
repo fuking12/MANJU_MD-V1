@@ -96,32 +96,43 @@ cmd(
         },
         { quoted: mek },
       );
+// Step 2: Listen for movie selection
+conn.ev.on("messages.upsert", async (update) => {
+  const message = update.messages[0];
+  if (!message.message || !message.message.extendedTextMessage) return;
 
-      // Step 2: Listen for movie selection
-      conn.ev.on("messages.upsert", async (update) => {
-        const message = update.messages[0];
-        if (!message.message || !message.message.extendedTextMessage) return;
+  const userReply = message.message.extendedTextMessage.text.trim();
+  
+  // ඩිබග් කිරීම: contextInfo ලොග් කරන්න
+  console.log("Reply ContextInfo:", message.message.extendedTextMessage.contextInfo);
+  
+  // රිප්ලයි එක ලින්ක් වෙලාද කියල චෙක් කරන්න (contextInfo නැත්නම් හැසිරෙන්න)
+  const replyStanzaId = message.message.extendedTextMessage.contextInfo?.stanzaId;
+  if (!replyStanzaId || replyStanzaId !== sentMessage.key.id) {
+    console.log("StanzaId mismatch or missing:", replyStanzaId, sentMessage.key.id);
+    return;
+  }
 
-        const userReply = message.message.extendedTextMessage.text.trim();
-        if (message.message.extendedTextMessage.contextInfo.stanzaId !== sentMessage.key.id) return;
+  const selectedNumber = parseInt(userReply, 10);
+  const selectedMovie = movies.find((movie) => movie.number === selectedNumber);
 
-        const selectedNumber = parseInt(userReply, 10);
-        const selectedMovie = movies.find((movie) => movie.number === selectedNumber);
+  if (!selectedMovie) {
+    await conn.sendMessage(
+      from,
+      {
+        text: frozenTheme.box(
+          "FROZEN WARNING",
+          "❅ Invalid decree!\n❅ Choose a valid movie number\n❅ The snowgies are bewildered",
+        ),
+        ...frozenTheme.getForwardProps(),
+      },
+      { quoted: message },
+    );
+    return;
+  }
 
-        if (!selectedMovie) {
-          await conn.sendMessage(
-            from,
-            {
-              text: frozenTheme.box(
-                "FROZEN WARNING",
-                "❅ Invalid decree!\n❅ Choose a valid movie number\n❅ The snowgies are bewildered",
-              ),
-              ...frozenTheme.getForwardProps(),
-            },
-            { quoted: message },
-          );
-          return;
-        }
+  // ඉතිරි කෝඩ් එක එහෙමම තියෙන්න ඕන...
+});
 
         // Step 3: Fetch download links
         const downloadUrl = `https://apis.davidcyriltech.my.id/movies/download?url=${encodeURIComponent(selectedMovie.link)}`;
