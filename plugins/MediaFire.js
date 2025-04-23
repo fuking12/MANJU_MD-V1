@@ -3,9 +3,9 @@ const axios = require('axios');
 
 // Simplified Frozen Queen Theme
 const frozenTheme = {
-  header: `💀Manju_MD\n✧ 🅿️♂️ ✧\n`,
+  header: `Mᴀɴᴊᴜ_MD🔰\n✧ Mᴀɴᴊᴜ_MD Mᴇᴅɪᴀғɪʀᴇ Dᴏᴡɴʟᴏᴀᴅᴇʀ.. ✧\n`,
   box: function(title, content) {
-    return `${this.header}❅ ${title} ❅\n${content}\n\n❄️ Powered by MR.Chathura ❄️`;
+    return `${this.header} ${title} ❅\n${content}\n\n⚕️Pᴏᴡᴇʀᴅ Bʏ Pᴀᴛʜᴜᴍ Rᴀᴊᴀᴘᴀᴋsʜᴇ`;
   },
   getForwardProps: function() {
     return {
@@ -16,13 +16,13 @@ const frozenTheme = {
       }
     };
   },
-  emojis: ["❄️", "🧊", "👑", "📄", "✧"]
+  emojis: ["↗️", "🧊", "↪️", "📄", "✧"]
 };
 
 // MediaFire download command
 cmd({
   pattern: "mfire",
-  react: "❄️",
+  react: "🌺",
   desc: "Download MediaFire files with Frozen Queen's magic",
   category: "ice kingdom",
   filename: __filename,
@@ -83,7 +83,7 @@ cmd({
     // Step 5: Check file size
     if (sizeInGB > 2) {
       await conn.sendMessage(from, {
-        text: frozenTheme.box("Ice Warning", 
+        text: frozenTheme.box("Dᴀʀᴋ Wᴀʀɴɪɴɢ", 
           `${frozenTheme.emojis[0]} Too large (${fileInfo.size})!\n${frozenTheme.emojis[4]} Download: ${fileInfo.link}`),
         ...frozenTheme.getForwardProps()
       }, { quoted: mek });
@@ -95,7 +95,7 @@ cmd({
       document: { url: fileInfo.link },
       mimetype: fileInfo.mimeType,
       fileName: fileInfo.name,
-      caption: frozenTheme.box("Ice Treasure", 
+      caption: frozenTheme.box("Dᴀʀᴋ Wᴀʀɴɪɴɢ", 
         `${frozenTheme.emojis[3]} ${fileInfo.name}\n${frozenTheme.emojis[2]} Size: ${fileInfo.size}\n${frozenTheme.emojis[4]} Your treasure awaits!`),
       ...frozenTheme.getForwardProps()
     }, { quoted: mek });
@@ -104,8 +104,8 @@ cmd({
 
   } catch (e) {
     console.error("Error:", e.message, e.stack);
-    await reply(frozenTheme.box("Ice Storm", 
-      `${frozenTheme.emojis[0]} Error: ${e.message || "Vault disrupted by Ice Harpies"}\n${frozenTheme.emojis[4]} Try again later`));
+    await reply(frozenTheme.box("Dᴀʀᴋ Sᴛᴏʀᴍ", 
+      `${frozenTheme.emojis[0]} Error: ${e.message || "Vault disrupted by Dᴀʀᴋ Harpies"}\n${frozenTheme.emojis[4]} Try again later`));
     await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
   }
 });
