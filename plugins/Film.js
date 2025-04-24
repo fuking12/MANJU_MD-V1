@@ -4,11 +4,14 @@ const NodeCache = require('node-cache');
 
 // Cache එක initialize කිරීම (30 තත්පර TTL, max 100 keys)
 const searchCache = new NodeCache({ stdTTL: 30, checkperiod: 60, maxKeys: 100 });
+const downloadCache = new NodeCache({ stdTTL: 30, checkperiod: 60, maxKeys: 50 });
 
 // Constants
 const TIMEOUT_DURATION = 60000; // 60 seconds timeout for listeners
-const API_TIMEOUT = 5000; // 5 seconds timeout for API calls
-const MAX_RETRIES = 3; // Maximum retries for API calls
+const API_TIMEOUT = 3000; // 3 seconds timeout for API calls
+const MAX_RETRIES = 2; // Reduced retries to minimize delay
+const RETRY_DELAY = 500; // Reduced retry delay to 500ms
+const MAX_FILE_SIZE_GB = 2; // Maximum file size in GB
 
 // ======================
 // FROZEN QUEEN තේමාව
@@ -47,8 +50,39 @@ const makeApiCall = async (url, retries = MAX_RETRIES) => {
       console.error(`API Error for ${url}:`, error.message);
       retries--;
       if (retries === 0) throw new Error(`Failed to fetch data: ${error.message}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
     }
+  }
+};
+
+// Utility function to stream file to WhatsApp with progress updates
+const streamFileToWhatsApp = async (conn, from, url, fileName, caption, quoted) => {
+  try {
+    // Progress message: Starting upload
+    await conn.sendMessage(from, {
+      text: frozenTheme.box("Sɪɴʜᴀʟᴀ Sᴜʙ Mᴏᴠɪᴇ",
+        `Film uploading... Please wait.`),
+      ...frozenTheme.getForwardProps()
+    }, { quoted });
+
+    const response = await axios({
+      url,
+      method: 'GET',
+      responseType: 'stream',
+      timeout: 30000 // 30 seconds timeout for download
+    });
+
+    await conn.sendMessage(from, {
+      document: response.data,
+      mimetype: "video/mp4",
+      fileName: fileName,
+      caption: caption,
+      ...frozenTheme.getForwardProps()
+    }, { quoted });
+
+    return true;
+  } catch (error) {
+    throw new Error(`Failed to stream file: ${error.message}`);
   }
 };
 
@@ -145,15 +179,25 @@ cmd({
       console.log("Film selection listener removed");
 
       // Step 5: ඩවුන්ලෝඩ් ලින්ක් ලබා ගැනීම
-      const downloadUrl = `https://apis.davidcyriltech.my.id/movies/download?url=${encodeURIComponent(selectedFilm.link)}`;
-      const downloadData = await makeApiCall(downloadUrl);
+      const downloadCacheKey = `download_${selectedFilm.link}`;
+      let downloadData = downloadCache.get(downloadCacheKey);
 
       if (!downloadData) {
-        throw new Error("No response from the download API");
-      }
+        const downloadUrl = `https://apis.davidcyriltech.my.id/movies/download?url=${encodeURIComponent(selectedFilm.link)}`;
+        downloadData = await makeApiCall(downloadUrl);
 
-      if (!downloadData.status || !downloadData.movie || !downloadData.movie.download_links) {
-        throw new Error("There is no download link for sinhalasub site.");
+        if (!downloadData) {
+          throw new Error("No response from the download API");
+        }
+
+        if (!downloadData.status || !downloadData.movie || !downloadData.movie.download_links) {
+          throw new Error("There is no download link for sinhalasub site.");
+        }
+
+        downloadCache.set(downloadCacheKey, downloadData);
+        console.log(`Download cache set for key ${downloadCacheKey}`);
+      } else {
+        console.log(`Download cache hit for key ${downloadCacheKey}`);
       }
 
       const downloadLinks = [];
@@ -243,7 +287,7 @@ cmd({
           sizeInGB = parseFloat(sizeStr.replace("mb", "").trim()) / 1024;
         }
 
-        if (sizeInGB > 2) {
+        if (sizeInGB > MAX_FILE_SIZE_GB) {
           await conn.sendMessage(from, {
             text: frozenTheme.box("Dᴀʀᴋ Wᴀʀɴɪɴɢ",
               ` The product is too big. (${selectedLink.size})!\n  Download directly: ${selectedLink.url}\n Choose a small quality`),
@@ -252,16 +296,53 @@ cmd({
           return;
         }
 
-        // Step 9: චිත්‍රපටය ලේඛනයක් ලෙස එවීම
+        // Step 9: Progress message එක යවන්න - "Your movie uploading..."
+        await conn.sendMessage(from, {
+          text: frozenTheme.box("Sɪɴʜᴀʟᴀ Sᴜʙ Mᴏᴠɪᴇ",
+            `Your movie uploading... Please wait.`),
+          ...frozenTheme.getForwardProps()
+        }, { quoted: qualityMessage });
+
+        // Step 10: Download එක ඉවර වුණාම "Film downloading successfully" message එක
         try {
+          const response = await axios({
+            url: selectedLink.url,
+            method: 'GET',
+            responseType: 'stream',
+            timeout: 30000 // 30 seconds timeout for download
+          });
+
           await conn.sendMessage(from, {
-            document: { url: selectedLink.url },
-            mimetype: "video/mp4",
-            fileName: `${selectedFilm.title} - ${selectedLink.quality}.mp4`,
-            caption: frozenTheme.box("Sɪɴʜᴀʟᴀ sᴜʙ Mᴏᴠɪᴇs",
-              `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n${frozenTheme.resultEmojis[4]} ǫᴜᴀʟʟɪᴛʏ: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} Bɪɢ ғɪʟᴇ: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} Your item shines in the Mᴀɴᴊᴜ_Mᴅ.!\n${frozenTheme.resultEmojis[9]} Mᴀɴᴢᴜ_ᴍᴅ ᴘᴏᴡᴇʀᴅ ʙʏ ᴘᴀᴛʜᴜᴍ ʀᴀᴢᴀᴘᴀᴋsʜᴇ`),
+            text: frozenTheme.box("Sɪɴʜᴀʟᴀ Sᴜʙ Mᴏᴠɪᴇ",
+              `Film downloading successfully`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
+
+        } catch (error) {
+          await conn.sendMessage(from, {
+            text: frozenTheme.box("sɪɴʜᴀʟᴀsᴜʙ ᴡᴀʀɴɪɴɢ",
+              ` ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ғᴀɪʟᴅ: ${error.message}\n❅ ᴅɪʀᴇᴄᴛ ᴅᴏᴡɴʟᴏᴀᴅ: ${selectedLink.url}\n ᴛʀʏ ᴀɢᴀɪɴ`),
+            ...frozenTheme.getForwardProps()
+          }, { quoted: qualityMessage });
+          return;
+        }
+
+        // Step 11: චිත්‍රපටය stream කරලා එවන්න with "Film uploading" message
+        try {
+          const startTime = Date.now();
+          await streamFileToWhatsApp(
+            conn,
+            from,
+            selectedLink.url,
+            `${selectedFilm.title} - ${selectedLink.quality}.mp4`,
+            frozenTheme.box("Sɪɴʜᴀʟᴀ sᴜʙ Mᴏᴠɪᴇs",
+              `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n${frozenTheme.resultEmojis[4]} ǫᴜᴀʟʟɪᴛʏ: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} Bɪɢ ғɪʟᴇ: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} Your item shines in the Mᴀɴᴊᴜ_Mᴅ.!\n${frozenTheme.resultEmojis[9]} Mᴀɴᴊᴜ_ᴍᴅ ᴘᴏᴡᴇʀᴅ ʙʏ ᴘᴀᴛʜᴜᴍ ʀᴀᴢᴀᴘᴀᴋsʜᴇ`),
+            qualityMessage
+          );
+
+          const endTime = Date.now();
+          const downloadTime = (endTime - startTime) / 1000; // seconds
+          console.log(`Download and upload completed in ${downloadTime} seconds`);
 
           await conn.sendMessage(from, { react: { text: frozenTheme.resultEmojis[0], key: qualityMessage.key } });
         } catch (downloadError) {
@@ -291,7 +372,7 @@ cmd({
   } catch (e) {
     console.error("දෝෂය:", e);
     const errorMsg = frozenTheme.box("SɪɴʜᴀʟᴀSᴜʙ Aᴛᴛᴇɴᴛɪᴏɴ",
-      `❅ දෝෂය: ${e.message || "sɪɴʜ�.aʟ�.aSᴜʙ destroyed the treasury"}\n❅ The sɪɴʜ�.aʟ�.aSᴜʙ sɪᴛᴇ is closed.\n❅ Fɪxᴇᴅ ᴢᴏᴏɴ Tʀʏ ʟ�.aɪᴛᴇʀ`);
+      `❅ දෝෂය: ${e.message || "sɪɴʜᴀʟᴀSᴜʙ destroyed the treasury"}\n❅ The sɪɴʜᴀʟᴀSᴜʙ sɪᴛᴇ is closed.\n❅ Fɪxᴇᴅ ᴢᴏᴏɴ Tʀʏ ʟᴀɪᴛᴇʀ`);
 
     await reply(errorMsg);
     await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
