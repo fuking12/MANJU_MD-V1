@@ -56,24 +56,17 @@ const makeApiCall = async (url, retries = MAX_RETRIES) => {
 };
 
 // Utility function to stream file to WhatsApp with progress updates
-const streamFileToWhatsApp = async (conn, from, url, fileName, caption, quoted) => {
+const streamFileToWhatsApp = async (conn, from, stream, fileName, caption, quoted) => {
   try {
-    // Progress message: Starting upload
+    // Progress message: Movie uploading
     await conn.sendMessage(from, {
       text: frozenTheme.box("Sɪɴʜᴀʟᴀ Sᴜʙ Mᴏᴠɪᴇ",
-        `Film uploading... Please wait.`),
+        `Movie uploading... Please wait.`),
       ...frozenTheme.getForwardProps()
     }, { quoted });
 
-    const response = await axios({
-      url,
-      method: 'GET',
-      responseType: 'stream',
-      timeout: 30000 // 30 seconds timeout for download
-    });
-
     await conn.sendMessage(from, {
-      document: response.data,
+      document: stream,
       mimetype: "video/mp4",
       fileName: fileName,
       caption: caption,
@@ -278,32 +271,38 @@ cmd({
         console.log("Quality selection listener removed");
 
         // Step 8: ගොනුවේ ප්‍රමාණය පරීක්ෂා කිරීම
-        const sizeStr = selectedLink.size.toLowerCase();
-        let sizeInGB = 0;
+        try {
+          const sizeStr = selectedLink.size.toLowerCase();
+          let sizeInGB = 0;
 
-        if (sizeStr.includes("gb")) {
-          sizeInGB = parseFloat(sizeStr.replace("gb", "").trim());
-        } else if (sizeStr.includes("mb")) {
-          sizeInGB = parseFloat(sizeStr.replace("mb", "").trim()) / 1024;
-        }
+          if (sizeStr.includes("gb")) {
+            sizeInGB = parseFloat(sizeStr.replace("gb", "").trim());
+          } else if (sizeStr.includes("mb")) {
+            sizeInGB = parseFloat(sizeStr.replace("mb", "").trim()) / 1024;
+          }
 
-        if (sizeInGB > MAX_FILE_SIZE_GB) {
+          console.log(`File size: ${sizeInGB} GB`);
+
+          if (sizeInGB > MAX_FILE_SIZE_GB) {
+            await conn.sendMessage(from, {
+              text: frozenTheme.box("Dᴀʀᴋ Wᴀʀɴɪɴɢ",
+                ` The product is too big. (${selectedLink.size})!\n  Download directly: ${selectedLink.url}\n Choose a small quality`),
+              ...frozenTheme.getForwardProps()
+            }, { quoted: qualityMessage });
+            return;
+          }
+        } catch (error) {
+          console.error("Error during file size check:", error);
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Dᴀʀᴋ Wᴀʀɴɪɴɢ",
-              ` The product is too big. (${selectedLink.size})!\n  Download directly: ${selectedLink.url}\n Choose a small quality`),
+            text: frozenTheme.box("SɪɴʜᴀʟᴀSᴜʙ Aᴛᴛᴇɴᴛɪᴏɴ",
+              `❅ Error during file size check: ${error.message}\n❅ Please try again.`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
           return;
         }
 
-        // Step 9: Progress message එක යවන්න - "Your movie uploading..."
-        await conn.sendMessage(from, {
-          text: frozenTheme.box("Sɪɴʜᴀʟᴀ Sᴜʙ Mᴏᴠɪᴇ",
-            `Your movie uploading... Please wait.`),
-          ...frozenTheme.getForwardProps()
-        }, { quoted: qualityMessage });
-
-        // Step 10: Download එක ඉවර වුණාම "Film downloading successfully" message එක
+        // Step 9: Download එක ආරම්භ කිරීම
+        let downloadStream;
         try {
           const response = await axios({
             url: selectedLink.url,
@@ -311,14 +310,19 @@ cmd({
             responseType: 'stream',
             timeout: 30000 // 30 seconds timeout for download
           });
+          downloadStream = response.data;
 
+          console.log("Download stream created successfully");
+
+          // Progress message: Download successfully
           await conn.sendMessage(from, {
             text: frozenTheme.box("Sɪɴʜᴀʟᴀ Sᴜʙ Mᴏᴠɪᴇ",
-              `Film downloading successfully`),
+              `Download successfully`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
 
         } catch (error) {
+          console.error("Error during download:", error);
           await conn.sendMessage(from, {
             text: frozenTheme.box("sɪɴʜᴀʟᴀsᴜʙ ᴡᴀʀɴɪɴɢ",
               ` ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ғᴀɪʟᴅ: ${error.message}\n❅ ᴅɪʀᴇᴄᴛ ᴅᴏᴡɴʟᴏᴀᴅ: ${selectedLink.url}\n ᴛʀʏ ᴀɢᴀɪɴ`),
@@ -327,13 +331,13 @@ cmd({
           return;
         }
 
-        // Step 11: චිත්‍රපටය stream කරලා එවන්න with "Film uploading" message
+        // Step 10: චිත්‍රපටය stream කරලා එවන්න with "Movie uploading" message
         try {
           const startTime = Date.now();
           await streamFileToWhatsApp(
             conn,
             from,
-            selectedLink.url,
+            downloadStream,
             `${selectedFilm.title} - ${selectedLink.quality}.mp4`,
             frozenTheme.box("Sɪɴʜᴀʟᴀ sᴜʙ Mᴏᴠɪᴇs",
               `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n${frozenTheme.resultEmojis[4]} ǫᴜᴀʟʟɪᴛʏ: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} Bɪɢ ғɪʟᴇ: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} Your item shines in the Mᴀɴᴊᴜ_Mᴅ.!\n${frozenTheme.resultEmojis[9]} Mᴀɴᴊᴜ_ᴍᴅ ᴘᴏᴡᴇʀᴅ ʙʏ ᴘᴀᴛʜᴜᴍ ʀᴀᴢᴀᴘᴀᴋsʜᴇ`),
@@ -341,14 +345,15 @@ cmd({
           );
 
           const endTime = Date.now();
-          const downloadTime = (endTime - startTime) / 1000; // seconds
-          console.log(`Download and upload completed in ${downloadTime} seconds`);
+          const uploadTime = (endTime - startTime) / 1000; // seconds
+          console.log(`Upload completed in ${uploadTime} seconds`);
 
           await conn.sendMessage(from, { react: { text: frozenTheme.resultEmojis[0], key: qualityMessage.key } });
-        } catch (downloadError) {
+        } catch (uploadError) {
+          console.error("Error during upload:", uploadError);
           await conn.sendMessage(from, {
             text: frozenTheme.box("sɪɴʜᴀʟᴀsᴜʙ ᴡᴀʀɴɪɴɢ",
-              ` ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ғᴀɪʟᴅ: ${downloadError.message}\n❅ ᴅɪʀᴇᴄᴛ ᴅᴏᴡɴʟᴏᴀᴅ: ${selectedLink.url}\n ᴛʀʏ ᴀɢᴀɪɴ`),
+              ` ᴜᴘʟᴏᴀᴅɪɴɢ ғᴀɪʟᴅ: ${uploadError.message}\n❅ ᴅɪʀᴇᴄᴛ ᴅᴏᴡɴʟᴏᴀᴅ: ${selectedLink.url}\n ᴛʀʏ ᴀɢᴀɪɴ`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
         }
