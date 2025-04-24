@@ -41,8 +41,10 @@ const makeApiCall = async (url, retries = MAX_RETRIES) => {
   while (retries > 0) {
     try {
       const response = await axios.get(url, { timeout: API_TIMEOUT });
+      console.log(`API Response for ${url}:`, JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
+      console.error(`API Error for ${url}:`, error.message);
       retries--;
       if (retries === 0) throw new Error(`Failed to fetch data: ${error.message}`);
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -72,11 +74,18 @@ cmd({
       const searchUrl = `https://apis.davidcyriltech.my.id/movies/search?query=${encodeURIComponent(q)}`;
       searchData = await makeApiCall(searchUrl);
 
+      if (!searchData) {
+        throw new Error("No response from the API");
+      }
+
       if (!searchData.status || !searchData.results || searchData.results.length === 0) {
         throw new Error("No movies found in sinhalasub site");
       }
 
       searchCache.set(cacheKey, searchData);
+      console.log(`Cache set for key ${cacheKey}:`, searchData);
+    } else {
+      console.log(`Cache hit for key ${cacheKey}:`, searchData);
     }
 
     // Step 2: චිත්‍රපට ලැයිස්තුව format කිරීම
@@ -106,13 +115,18 @@ cmd({
       ...frozenTheme.getForwardProps()
     }, { quoted: mek });
 
+    console.log("Film list sent with message ID:", sentMessage.key.id);
+
     // Step 4: චිත්‍රපට තේරීම බලා සිටීම (Single Event Listener)
     const filmSelectionHandler = async (update) => {
       const message = update.messages[0];
       if (!message.message || !message.message.extendedTextMessage) return;
 
       const userReply = message.message.extendedTextMessage.text.trim();
-      if (message.message.extendedTextMessage.contextInfo.stanzaId !== sentMessage.key.id) return;
+      const stanzaId = message.message.extendedTextMessage.contextInfo.stanzaId;
+      console.log(`Received reply: ${userReply}, stanzaId: ${stanzaId}, expected: ${sentMessage.key.id}`);
+
+      if (stanzaId !== sentMessage.key.id) return;
 
       const selectedNumber = parseInt(userReply);
       const selectedFilm = films.find(film => film.number === selectedNumber);
@@ -128,10 +142,15 @@ cmd({
 
       // Remove film selection listener
       conn.ev.off("messages.upsert", filmSelectionHandler);
+      console.log("Film selection listener removed");
 
       // Step 5: ඩවුන්ලෝඩ් ලින්ක් ලබා ගැනීම
       const downloadUrl = `https://apis.davidcyriltech.my.id/movies/download?url=${encodeURIComponent(selectedFilm.link)}`;
       const downloadData = await makeApiCall(downloadUrl);
+
+      if (!downloadData) {
+        throw new Error("No response from the download API");
+      }
 
       if (!downloadData.status || !downloadData.movie || !downloadData.movie.download_links) {
         throw new Error("There is no download link for sinhalasub site.");
@@ -185,13 +204,18 @@ cmd({
         ...frozenTheme.getForwardProps()
       }, { quoted: message });
 
+      console.log("Download options sent with message ID:", downloadMessage.key.id);
+
       // Step 7: Quality selection awaits (Single Event Listener)
       const qualitySelectionHandler = async (updateQuality) => {
         const qualityMessage = updateQuality.messages[0];
         if (!qualityMessage.message || !qualityMessage.message.extendedTextMessage) return;
 
         const qualityReply = qualityMessage.message.extendedTextMessage.text.trim();
-        if (qualityMessage.message.extendedTextMessage.contextInfo.stanzaId !== downloadMessage.key.id) return;
+        const qualityStanzaId = qualityMessage.message.extendedTextMessage.contextInfo.stanzaId;
+        console.log(`Received quality reply: ${qualityReply}, stanzaId: ${qualityStanzaId}, expected: ${downloadMessage.key.id}`);
+
+        if (qualityStanzaId !== downloadMessage.key.id) return;
 
         const selectedQualityNumber = parseInt(qualityReply);
         const selectedLink = downloadLinks.find(link => link.number === selectedQualityNumber);
@@ -207,6 +231,7 @@ cmd({
 
         // Remove quality selection listener
         conn.ev.off("messages.upsert", qualitySelectionHandler);
+        console.log("Quality selection listener removed");
 
         // Step 8: ගොනුවේ ප්‍රමාණය පරීක්ෂා කිරීම
         const sizeStr = selectedLink.size.toLowerCase();
@@ -227,14 +252,14 @@ cmd({
           return;
         }
 
-        // Step 9: චිත්‍රපටය ලේඛන_TEAM_QUEEN_යක් ලෙස එවීම
+        // Step 9: චිත්‍රපටය ලේඛනයක් ලෙස එවීම
         try {
           await conn.sendMessage(from, {
             document: { url: selectedLink.url },
             mimetype: "video/mp4",
             fileName: `${selectedFilm.title} - ${selectedLink.quality}.mp4`,
             caption: frozenTheme.box("Sɪɴʜᴀʟᴀ sᴜʙ Mᴏᴠɪᴇs",
-              `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n${frozenTheme.resultEmojis[4]} ǫᴜᴀʟʟɪᴛʏ: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} Bɪɢ ғɪʟᴇ: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} Your item shines in the Mᴀɴᴊᴜ_Mᴅ.!\n${frozenTheme.resultEmojis[9]} Mᴀɴᴊᴜ_ᴍᴅ ᴘᴏᴡᴇʀᴅ ʙʏ ᴘᴀᴛʜᴜᴍ ʀᴀᴢᴀᴘᴀᴋsʜᴇ`),
+              `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n${frozenTheme.resultEmojis[4]} ǫᴜᴀʟʟɪᴛʏ: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} Bɪɢ ғɪʟᴇ: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} Your item shines in the Mᴀɴᴊᴜ_Mᴅ.!\n${frozenTheme.resultEmojis[9]} Mᴀɴᴢᴜ_ᴍᴅ ᴘᴏᴡᴇʀᴅ ʙʏ ᴘᴀᴛʜᴜᴍ ʀᴀᴢᴀᴘᴀᴋsʜᴇ`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
 
@@ -250,17 +275,23 @@ cmd({
 
       // Register quality selection listener with timeout
       conn.ev.on("messages.upsert", qualitySelectionHandler);
-      setTimeout(() => conn.ev.off("messages.upsert", qualitySelectionHandler), TIMEOUT_DURATION);
+      setTimeout(() => {
+        conn.ev.off("messages.upsert", qualitySelectionHandler);
+        console.log("Quality selection listener timed out and removed");
+      }, TIMEOUT_DURATION);
     };
 
     // Register film selection listener with timeout
     conn.ev.on("messages.upsert", filmSelectionHandler);
-    setTimeout(() => conn.ev.off("messages.upsert", filmSelectionHandler), TIMEOUT_DURATION);
+    setTimeout(() => {
+      conn.ev.off("messages.upsert", filmSelectionHandler);
+      console.log("Film selection listener timed out and removed");
+    }, TIMEOUT_DURATION);
 
   } catch (e) {
     console.error("දෝෂය:", e);
     const errorMsg = frozenTheme.box("SɪɴʜᴀʟᴀSᴜʙ Aᴛᴛᴇɴᴛɪᴏɴ",
-      `❅ දෝෂය: ${e.message || "sɪɴʜᴀʟᴀSᴜʙ destroyed the treasury"}\n❅ The sɪɴʜᴀʟᴀSᴜʙ sɪᴛᴇ is closed.\n❅ Fɪxᴇᴅ ᴢᴏᴏɴ Tʀʏ ʟᴀɪᴛᴇʀ`);
+      `❅ දෝෂය: ${e.message || "sɪɴʜ�.aʟ�.aSᴜʙ destroyed the treasury"}\n❅ The sɪɴʜ�.aʟ�.aSᴜʙ sɪᴛᴇ is closed.\n❅ Fɪxᴇᴅ ᴢᴏᴏɴ Tʀʏ ʟ�.aɪᴛᴇʀ`);
 
     await reply(errorMsg);
     await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
