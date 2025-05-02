@@ -6,12 +6,12 @@ const NodeCache = require('node-cache');
 const searchCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
 
 // ======================
-// FROZEN QUEEN Theme
+// MANJU_MD Theme
 // ======================
-const frozenTheme = {
-  header: `╭═══❖•°❄️°•❖═══╮\n   ༺ FROZEN-QUEEN-MD ༻\n   ❅ THE ROYAL ICE KINGDOM ❅\n╰═══❖•°❄️°•❖═══╯\n`,
+const manjuTheme = {
+  header: `🎬 MANJU_MD MOVIE VAULT 🎬\n*PATHUM RAJAPAKSHE SINHALASUB SITE*\n`,
   box: function(title, content) {
-    return `${this.header}╔═════❖ ❄️ ❖═════╗\n   ✧ ${title} ✧\n╚═════❖ ❄️ ❖═════╝\n\n${content}\n\n❄═════❖ ❄️ ❖═════❄\n✧ THE COLD NEVER BOTHERED ME ANYWAY ✧`;
+    return `${this.header}═══════ 🎥 ═══════\n✨ ${title} ✨\n═══════════════\n\n${content}\n\n═══════ 🎬 ═══════\n*PATHUM RAJAPAKSHE SINHALASUB SITE*`;
   },
   getForwardProps: function() {
     return {
@@ -22,28 +22,28 @@ const frozenTheme = {
         mentionedJid: [],
         conversionData: {
           conversionDelaySeconds: 0,
-          conversionSource: "frozen_queen",
+          conversionSource: "manju_md",
           conversionType: "message"
         }
       }
     };
   },
-  resultEmojis: ["❄️", "🧊", "👑", "🎥", "🎬", "📽️", "🎞️", "❅", "✧", "🌬️"]
+  resultEmojis: ["🎬", "🎥", "🔢", "📽️", "🎞️", "✨", "🌟", "🎭", "📺", "🔍"]
 };
 
 // Film search and download command
 cmd({
-  pattern: "film2",
-  react: "❄️",
-  desc: "Enjoy cinema from Frozen Queen's treasury of films with Sinhala subtitles",
-  category: "ice kingdom",
+  pattern: "sinhalasub",
+  react: "🎬",
+  desc: "Enjoy cinema from MANJU_MD's treasury of films with Sinhala subtitles",
+  category: "movie vault",
   filename: __filename,
 }, async (conn, mek, m, { from, q, pushname }) => {
   if (!q) {
     await conn.sendMessage(from, {
-      text: frozenTheme.box("Royal Decree", 
-        "❅ Usage: .film2 <movie name>\n❅ Example: .film2 Deadpool\n❅ Vault: Films with Sinhala Subtitles\n❅ Reply 'done' to stop"),
-      ...frozenTheme.getForwardProps()
+      text: manjuTheme.box("Royal Decree", 
+        "🎬 Usage: .film2 <movie name>\n🎬 Example: .film2 Deadpool\n🎬 Vault: Films with Sinhala Subtitles\n🎬 Reply 'done' to stop"),
+      ...manjuTheme.getForwardProps()
     }, { quoted: mek });
     return;
   }
@@ -69,31 +69,29 @@ cmd({
       }
 
       if (!searchData.status || !searchData.result.data || searchData.result.data.length === 0) {
-        throw new Error("No films found in Ice Kingdom");
+        throw new Error("No films found in Movie Vault");
       }
 
       searchCache.set(cacheKey, searchData);
     }
 
     // Step 2: Format movie list
-    let filmList = `❄️ *FROZEN CINEMATIC VAULT* ❄️\n\n`;
+    let filmList = `Sinhalasub Movie Results 🎬\n\nInput: ${q}\n\nReply Below Number 🔢,\nsinhalasub.lk results\n\n`;
     const films = searchData.result.data.map((film, index) => ({
       number: index + 1,
-      title: film.title.replace("Sinhala Subtitles | සිංහල උපසිරසි සමඟ", "").trim(),
+      title: film.title,
       link: film.link,
       image: null // Image not provided in search API, will fetch later
     }));
 
     films.forEach(film => {
-      filmList += `${frozenTheme.resultEmojis[0]} ${film.number}. *${film.title}*\n\n`;
+      filmList += `${film.number} || ${film.title}\n`;
     });
-    filmList += `${frozenTheme.resultEmojis[8]} Select a movie: Reply with the number\n`;
-    filmList += `${frozenTheme.resultEmojis[9]} Reply 'done' to stop\n`;
-    filmList += `${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`;
+    filmList += `\n${manjuTheme.resultEmojis[2]} Reply 'done' to stop\n${manjuTheme.resultEmojis[9]} MANJU_MD BY PATHUM RAJAPAKSHE`;
 
     const movieListMessage = await conn.sendMessage(from, {
-      text: frozenTheme.box("Cinematic Quest", filmList),
-      ...frozenTheme.getForwardProps()
+      text: manjuTheme.box("Movie Quest", filmList),
+      ...manjuTheme.getForwardProps()
     }, { quoted: mek });
 
     const movieListMessageKey = movieListMessage.key;
@@ -114,9 +112,9 @@ cmd({
         conn.ev.off("messages.upsert", selectionHandler);
         downloadOptionsMap.clear();
         await conn.sendMessage(from, {
-          text: frozenTheme.box("Royal Farewell", 
-            "❅ Cinematic quest ended!\n❅ Return to the Ice Kingdom anytime"),
-          ...frozenTheme.getForwardProps()
+          text: manjuTheme.box("Farewell", 
+            "🎬 Movie quest ended!\n🎬 Return to the Movie Vault anytime"),
+          ...manjuTheme.getForwardProps()
         }, { quoted: message });
         return;
       }
@@ -128,9 +126,9 @@ cmd({
 
         if (!selectedFilm) {
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Frozen Warning", 
-              "❅ Invalid selection!\n❅ Choose a movie number\n❅ Snowgies are confused"),
-            ...frozenTheme.getForwardProps()
+            text: manjuTheme.box("Warning", 
+              "🎬 Invalid selection!\n🎬 Choose a movie number"),
+            ...manjuTheme.getForwardProps()
           }, { quoted: message });
           return;
         }
@@ -138,9 +136,9 @@ cmd({
         // Validate movie link
         if (!selectedFilm.link || !selectedFilm.link.startsWith('http')) {
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Ice Warning", 
-              "❅ Invalid movie link provided\n❅ Please select another movie"),
-            ...frozenTheme.getForwardProps()
+            text: manjuTheme.box("Warning", 
+              "🎬 Invalid movie link provided\n🎬 Please select another movie"),
+            ...manjuTheme.getForwardProps()
           }, { quoted: message });
           return;
         }
@@ -163,9 +161,9 @@ cmd({
             downloadRetries--;
             if (downloadRetries === 0) {
               await conn.sendMessage(from, {
-                text: frozenTheme.box("Ice Warning", 
-                  `❅ Failed to fetch download links: ${error.message}\n❅ Please try another movie`),
-                ...frozenTheme.getForwardProps()
+                text: manjuTheme.box("Warning", 
+                  `🎬 Failed to fetch download links: ${error.message}\n🎬 Please try another movie`),
+                ...manjuTheme.getForwardProps()
               }, { quoted: message });
               return;
             }
@@ -203,26 +201,26 @@ cmd({
 
         if (downloadLinks.length === 0) {
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Ice Warning", 
-              "❅ No SD or HD quality links available\n❅ Please try another movie"),
-            ...frozenTheme.getForwardProps()
+            text: manjuTheme.box("Warning", 
+              "🎬 No SD or HD quality links available\n🎬 Please try another movie"),
+            ...manjuTheme.getForwardProps()
           }, { quoted: message });
           return;
         }
 
-        let downloadOptions = `${frozenTheme.resultEmojis[3]} *${selectedFilm.title}*\n\n`;
-        downloadOptions += `${frozenTheme.resultEmojis[4]} *Choose Quality*:\n\n`;
+        let downloadOptions = `${manjuTheme.resultEmojis[3]} *${selectedFilm.title}*\n\n`;
+        downloadOptions += `${manjuTheme.resultEmojis[4]} *Choose Quality*:\n\n`;
         downloadLinks.forEach(link => {
-          downloadOptions += `${frozenTheme.resultEmojis[0]} ${link.number}. *${link.quality}* (${link.size})\n`;
+          downloadOptions += `${manjuTheme.resultEmojis[0]} ${link.number}. *${link.quality}* (${link.size})\n`;
         });
-        downloadOptions += `\n${frozenTheme.resultEmojis[8]} Select quality: Reply with the number\n`;
-        downloadOptions += `${frozenTheme.resultEmojis[9]} Reply 'done' to stop\n`;
-        downloadOptions += `${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`;
+        downloadOptions += `\n${manjuTheme.resultEmojis[8]} Select quality: Reply with the number\n`;
+        downloadOptions += `${manjuTheme.resultEmojis[9]} Reply 'done' to stop\n`;
+        downloadOptions += `${manjuTheme.resultEmojis[9]} MANJU_MD BY PATHUM RAJAPAKSHE`;
 
         const downloadMessage = await conn.sendMessage(from, {
           image: { url: movieDetails.image || "https://i.ibb.co/5Yb4VZy/snowflake.jpg" },
-          caption: frozenTheme.box("Royal Treasury", downloadOptions),
-          ...frozenTheme.getForwardProps()
+          caption: manjuTheme.box("Movie Treasury", downloadOptions),
+          ...manjuTheme.getForwardProps()
         }, { quoted: message });
 
         // Store download options in Map
@@ -236,9 +234,9 @@ cmd({
 
         if (!selectedLink) {
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Frozen Warning", 
-              "❅ Invalid quality selection!\n❅ Choose a quality number\n❅ Snowgies are confused"),
-            ...frozenTheme.getForwardProps()
+            text: manjuTheme.box("Warning", 
+              "🎬 Invalid quality selection!\n🎬 Choose a quality number"),
+            ...manjuTheme.getForwardProps()
           }, { quoted: message });
           return;
         }
@@ -254,9 +252,9 @@ cmd({
 
         if (sizeInGB > 2) {
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Ice Warning", 
-              `❅ Item too large (${selectedLink.size})!\n❅ Direct download: ${selectedLink.url}\n❅ Try a smaller quality`),
-            ...frozenTheme.getForwardProps()
+            text: manjuTheme.box("Warning", 
+              `🎬 Item too large (${selectedLink.size})!\n🎬 Direct download: ${selectedLink.url}\n🎬 Try a smaller quality`),
+            ...manjuTheme.getForwardProps()
           }, { quoted: message });
           return;
         }
@@ -267,17 +265,17 @@ cmd({
             document: { url: selectedLink.url },
             mimetype: "video/mp4",
             fileName: `${film.title} - ${selectedLink.quality}.mp4`,
-            caption: frozenTheme.box("Cinematic Treasure", 
-              `${frozenTheme.resultEmojis[3]} *${film.title}*\n${frozenTheme.resultEmojis[4]} Quality: ${selectedLink.quality}\n${frozenTheme.resultEmojis[2]} Size: ${selectedLink.size}\n\n${frozenTheme.resultEmojis[8]} Your treasure shines in Ice Kingdom!\n${frozenTheme.resultEmojis[9]} FROZEN-QUEEN BY MR.Chathura`),
-            ...frozenTheme.getForwardProps()
+            caption: manjuTheme.box("Movie Treasure", 
+              `${manjuTheme.resultEmojis[3]} *${film.title}*\n${manjuTheme.resultEmojis[4]} Quality: ${selectedLink.quality}\n${manjuTheme.resultEmojis[2]} Size: ${selectedLink.size}\n\n${manjuTheme.resultEmojis[8]} MANJU_MD MOVIE DOWNLOAD SUCCESSFULLY!\n${manjuTheme.resultEmojis[9]} MANJU_MD BY PATHUM RAJAPAKSHE`),
+            ...manjuTheme.getForwardProps()
           }, { quoted: message });
 
-          await conn.sendMessage(from, { react: { text: frozenTheme.resultEmojis[0], key: message.key } });
+          await conn.sendMessage(from, { react: { text: manjuTheme.resultEmojis[0], key: message.key } });
         } catch (downloadError) {
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Ice Warning", 
-              `❅ Download error: ${downloadError.message}\n❅ Direct download: ${selectedLink.url}\n❅ Try again`),
-            ...frozenTheme.getForwardProps()
+            text: manjuTheme.box("Warning", 
+              `🎬 Download error: ${downloadError.message}\n🎬 Direct download: ${selectedLink.url}\n🎬 Try again`),
+            ...manjuTheme.getForwardProps()
           }, { quoted: message });
         }
       }
@@ -289,9 +287,9 @@ cmd({
   } catch (e) {
     console.error("Error:", e);
     await conn.sendMessage(from, {
-      text: frozenTheme.box("Ice Storm", 
-        `❅ Error: ${e.message || "Ice Harpies destroyed the treasury"}\n❅ Royal treasury closed\n❅ Try again after the storm clears`),
-      ...frozenTheme.getForwardProps()
+      text: manjuTheme.box("Error", 
+        `🎬 Error: ${e.message || "Movie Vault access failed"}\n🎬 Vault closed\n🎬 Try again later`),
+      ...manjuTheme.getForwardProps()
     }, { quoted: mek });
     await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
   }
