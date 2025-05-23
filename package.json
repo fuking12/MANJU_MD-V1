@@ -56,7 +56,8 @@
     "dotenv": "^16.5.0",
     "https": "^1.0.0",
     "node-cache": "^5.1.2",
-    "diskusage": "^1.2.0"
+    "diskusage": "^1.2.0",
+    "openai-api": "^1.3.1"
 
 
     
