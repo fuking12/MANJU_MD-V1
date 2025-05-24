@@ -4,53 +4,77 @@ const { cmd } = require('../command');
 
 cmd({
     pattern: "addplugin",
-    desc: "Add a new plugin to the bot dynamically",
+    desc: "නව plugin එකක් bot එකට dynamically එකතු කරන්න",
     category: "owner",
     react: "🔌",
     filename: __filename
 },
 async (sock, mek, m, { from, args, q, isOwner, reply }) => {
     if (!isOwner) {
-        await reply("❌ This command is restricted to the bot owner.");
+        await reply("❌ මෙම command එක bot ownerට පමණයි.");
         return;
     }
 
     if (!q) {
-        await reply("❌ Please provide the plugin code after the command. Example: .addplugin [plugin code]");
+        await reply("❌ Plugin code එක command එකත් එක්ක දෙන්න. උදා: .addplugin [plugin code]");
         return;
     }
 
     try {
-        // Generate a unique plugin name based on timestamp
-        const pluginName = `plugin_${Date.now()}.js`;
-        const pluginPath = path.join(__dirname, '../plugins', pluginName);
-
-        // Basic validation of the plugin code
-        if (!q.includes('cmd') || !q.includes('require')) {
-            await reply("⚠️ Warning: The plugin code should use the 'cmd' function and proper require statements.");
+        // Plugins folder එක exist කරනවද බලනවා, නැත්නම් හදනවා
+        const pluginsDir = path.join(__dirname, '../plugins');
+        if (!fs.existsSync(pluginsDir)) {
+            fs.mkdirSync(pluginsDir, { recursive: true });
+            await reply("📁 Plugins folder එක හදන ලදි.");
         }
 
-        // Write the plugin code to a file
-        fs.writeFileSync(pluginPath, q);
+        // Unique plugin name එකක් timestamp එකෙන් හදනවා
+        const pluginName = `plugin_${Date.now()}.js`;
+        const pluginPath = path.join(pluginsDir, pluginName);
 
-        // Verify the plugin file exists
-        if (!fs.existsSync(pluginPath)) {
-            await reply("❌ Failed to save the plugin.");
+        // Debug: Log the path
+        console.log(`Attempting to save plugin at: ${pluginPath}`);
+
+        // Basic code validation
+        if (!q.includes('cmd') || !q.includes('require')) {
+            await reply("⚠️ Plugin code එකේ 'cmd' function එක සහ require statements තියෙන්න ඕන.");
+        }
+
+        // Check write permissions
+        try {
+            fs.accessSync(pluginsDir, fs.constants.W_OK);
+        } catch (permError) {
+            await reply("❌ Plugins folder එකට write කිරීමට permission නැත. Permission check කරන්න.");
+            console.error(`Permission error: ${permError.message}`);
             return;
         }
 
-        // Dynamically load the plugin
+        // Plugin code එක file එකකට save කරනවා
+        fs.writeFileSync(pluginPath, q);
+        console.log(`Plugin saved at: ${pluginPath}`);
+
+        // File එක save වුණාද බලනවා
+        if (!fs.existsSync(pluginPath)) {
+            await reply("❌ Plugin එක save කරන්න බැරි වුණා.");
+            console.error("File save failed: File does not exist after write.");
+            return;
+        }
+
+        // Plugin එක dynamically load කරනවා
         try {
             require(pluginPath);
-            await reply(`✅ Plugin '${pluginName}' added and loaded successfully!`);
+            await reply(`✅ '${pluginName}' plugin එක successfully එකතු වුණා!`);
+            console.log(`Plugin ${pluginName} loaded successfully.`);
         } catch (loadError) {
-            // Remove the faulty plugin file if loading fails
+            // Load කරන්න බැරි වුණොත් file එක delete කරනවා
             fs.unlinkSync(pluginPath);
-            await reply(`❌ Error loading plugin: ${loadError.message}`);
+            await reply(`❌ Plugin load කරද්දි error එකක්: ${loadError.message}`);
+            console.error(`Load error: ${loadError.message}`);
             return;
         }
 
     } catch (error) {
-        await reply(`❌ Error adding plugin: ${error.message}`);
+        await reply(`❌ Plugin එකතු කරද්දි error එකක්: ${error.message}`);
+        console.error(`General error: ${error.message}`);
     }
 });
