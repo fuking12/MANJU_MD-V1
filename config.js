@@ -27,6 +27,8 @@ module.exports = {
   MODE: process.env.MODE || "inbox",
 
   MOVIE_API_KEY: process.env.API_KEY || "sky|2483faa7f5630311464123d017fc7acc2aec6da0",
+
+  GEMINI_API_KEY: process.env.API_KEY || "AIzaSyDPVatitohZS_ZFnbxETQ1jtXLcR0azy_0",
   
   
 
