@@ -34,21 +34,33 @@ Views: ${data.views}
 
 MADE BY MANJU_MD V1 ✅
 `;
-
         // Send thumbnail with description
-        await robin.sendMessage(from, { image: { url: data.thumbnail }, caption: desc }, { quoted: mek });
+await robin.sendMessage(from, { image: { url: data.thumbnail }, caption: desc }, { quoted: mek });
 
-        // Download audio
-        let down = await fg.yta(url);
-        let downloadUrl = down.dl_url;
-
-        
-
-        // Send audio message
-        await robin.sendMessage(from, { audio: { url: downloadUrl }, mimetype: "audio/mpeg" }, { quoted: mek });
-
-    } catch (e) {
-        console.error("Error:", e);
-        reply(`Error: ${e.message}`);
+// Download audio
+let down;
+try {
+    // Validate URL
+    if (!url || !url.includes('youtube.com') && !url.includes('youtu.be')) {
+        return await reply('Invalid YouTube URL. Please provide a valid YouTube link.');
     }
+
+    down = await fg.yta(url);
+    if (!down || !down.dl_url) {
+        return await reply('ඩවුන්ලෝඩ් ලින්ක් එක හමු වුණේ නැහැ. URL එක බලලා නැවත උත්සාහ කරන්න.');
+    }
+} catch (e) {
+    console.error('fg.yta Error:', e);
+    return await reply(`❌ ගීතය ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක්: ${e.message}`);
+}
+
+const downloadUrl = down.dl_url;
+
+// Send audio message
+await robin.sendMessage(from, { audio: { url: downloadUrl }, mimetype: "audio/mpeg" }, { quoted: mek });
+
+} catch (e) {
+    console.error("Error:", e);
+    await reply(`❌ Error: ${e.message}`);
+}
 });
