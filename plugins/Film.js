@@ -50,7 +50,7 @@ cmd({
     let searchData = searchCache.get(cacheKey);
 
     if (!searchData) {
-      const searchUrl = `https://apis.davidcyriltech.my.id/movies/search?query=${encodeURIComponent(q)}`;
+      const searchUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`;
       let retries = 3;
       while (retries > 0) {
         try {
@@ -122,7 +122,7 @@ cmd({
       conn.ev.off("messages.upsert", filmSelectionHandler);
 
       // Step 5: ඩවුන්ලෝඩ් ලින්ක් ලබා ගැනීම
-      const downloadUrl = `https://apis.davidcyriltech.my.id/movies/download?url=${encodeURIComponent(selectedFilm.link)}`;
+      const downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
       let downloadData;
       let downloadRetries = 3;
 
