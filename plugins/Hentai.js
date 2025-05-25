@@ -17,7 +17,7 @@ cmd({
         }
 
         // Loading indicator
-        await citel.reply('🔍 Hentai වීඩියෝ සොයමින්... ටිකක් ඉන්න...');
+        await citel.reply('🔍 Hentai විඩියෝ සොයමින්... ටිකක් ඉන්න...');
 
         // API request එක යවනවා
         const apiUrl = 'https://www.dark-yasiya-api.site/download/henati';
@@ -27,12 +27,17 @@ cmd({
         });
 
         // API response එක check කරනවා
-        if (!response.data || !response.data.videos || response.data.videos.length === 0) {
+        if (!response.data || !Array.isArray(response.data.videos) || response.data.videos.length === 0) {
             return await citel.reply('ඔබේ query එකට Hentai වීඩියෝ හමු වුණේ නැහැ.');
         }
 
-        // පළවෙනි video එක ගන්නවා
+        // පැළඳේ video තොරතුරු ගන්නවා
         const video = response.data.videos[0];
+        
+        // Validate the necessary fields exist
+        if (!video.title || !video.duration || !video.quality || !video.url) {
+            return await citel.reply('ආපසු සොයාගත් වීඩියෝට තොරතුරු සම්පූර්ණ නැවුම් බව ප්‍රතික්ෂේප කරන ලදි.');
+        }
 
         // Video තොරතුරු යවනවා
         await citel.reply(
@@ -53,8 +58,10 @@ cmd({
 
         // Temp file path එක හදනවා
         const tempFilePath = path.join(tempDir, `${Date.now()}_hentai.mp4`);
+        
+        // Write the file safely
         await fs.writeFile(tempFilePath, Buffer.from(videoResponse.data));
-
+        
         // Video එක WhatsApp හරහා යවනවා
         await citel.reply({
             video: { url: tempFilePath },
@@ -62,11 +69,29 @@ cmd({
             mimetype: 'video/mp4'
         });
 
-        // Temp file එක delete කරනවා
-        await fs.unlink(tempFilePath);
-
     } catch (error) {
-        console.error('Hentai command එකේ දෝෂයක්:', error);
-        await citel.reply('❌ Hentai වීඩියෝ ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති වුණා. නැවත උත්සාහ කරන්න.');
-    }
+        console.error('Hentai command එකේ දෝෂයක්:', error.message);  // Log only the error message for a cleaner log
+       
+       let errorMessage = '❌ Hentai වීඩියෝ ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති වුණා. ';
+       
+       if (error.response) {
+           errorMessage += 'වැඩි විස්තර සඳහා පිවිසෙන්න.';  // If it's a response error
+       } else if (error.code) {
+           errorMessage += `දෝෂ කේතය: ${error.code}`;  // If it has a code property
+       } else {
+           errorMessage += error.message;  // General fallback for other errors
+       }
+       
+       await citel.reply(errorMessage);
+   } finally {
+       try {
+           // Cleanup the temp file regardless of whether there was an error or not but ensure it exists first.
+           if (tempFilePath && fs.existsSync(tempFilePath)) {
+               await fs.unlink(tempFilePath);
+           }
+       } catch (cleanupError) {
+           console.error('Failed to delete temp file:', cleanupError.message);
+       }
+   }
 });
+    
