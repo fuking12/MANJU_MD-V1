@@ -1,6 +1,6 @@
-const {cmd , commands} = require('../command'
-const fg = require('api-dylux')
-const yts = require('yt-search')
+const { cmd, commands } = require('../command');
+const fg = require('api-dylux');
+const yts = require('yt-search');
 
 cmd({
     pattern: "audio",
@@ -9,38 +9,46 @@ cmd({
     category: "download",
     filename: __filename
 },
-async(robin, mek, m,{from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply}) => {
-try{
-if(!p) return reply ("please give me url or title")
-const search = await yts(p)  
-const data = search.video[0];
-const url = data.ur
+async (robin, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+    try {
+        // Get query from q or args
+        const p = q || args.join(" ");
+        if (!p) return reply("Please provide a URL or title");
 
-let desc = `
+        // Search YouTube
+        const search = await yts(p);
+        if (!search.videos || search.videos.length === 0) return reply("No videos found for your query");
+
+        const data = search.videos[0];
+        const url = data.url;
+
+        // Prepare description
+        let desc = `
 🎵 *MANJU_MD SONG DOWNLOADER* 🎵
 
-title: ${data.title}
-description: ${data.description}
-time: ${data.timestamp}
-ago: ${data.ago}
-views: ${data.views}
+Title: ${data.title}
+Description: ${data.description}
+Duration: ${data.timestamp}
+Uploaded: ${data.ago}
+Views: ${data.views}
 
-MADE BY MANJU_MD V1✅
-`
-await conn.sendMessage(from,{image:{url: data.thumbnail},caption:desc},{quoted:mek});
+MADE BY MANJU_MD V1 ✅
+`;
 
-//download audio
+        // Send thumbnail with description
+        await robin.sendMessage(from, { image: { url: data.thumbnail }, caption: desc }, { quoted: mek });
 
-let down = await fg.yta(url)
-let downloadurl = down.dl_url
+        // Download audio
+        let down = await fg.yta(url);
+        if (!down || !down.dl_url) return reply("Failed to get download URL");
 
-//send audio massage
-await conn.sendMessage(from,{audio: {url:downloadurl},mimetype:"audio/mpeg"},{quoted:mek})
-  
+        let downloadUrl = down.dl_url;
 
-}catch(e){
-console.log(e)
-reply(`${e}`)
-}
-})
-  
+        // Send audio message
+        await robin.sendMessage(from, { audio: { url: downloadUrl }, mimetype: "audio/mpeg" }, { quoted: mek });
+
+    } catch (e) {
+        console.error("Error:", e);
+        reply(`Error: ${e.message}`);
+    }
+});
