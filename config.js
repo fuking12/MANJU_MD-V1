@@ -22,9 +22,13 @@ module.exports = {
 
   ALIVE_MSG: process.env.ALIVE_MSG || "🛠 *ManjuBot v3.0 - Fully Operational!* 🛠\n⚡ *Status: Online & Ready to Dominate!*\n⏰ *Current Time in Sri Lanka: 🕒 {time}*\n📡 *Powered by Manju362 | Commands Active!*\n🔥 *Drop a command to unleash the power! Try .menu* 🔥",
 
+  AUTO_READ_STATUS: process.env.AUTO_READ_STATUS || "true",
+
   MODE: process.env.MODE || "inbox",
 
   MOVIE_API_KEY: process.env.API_KEY || "sky|2483faa7f5630311464123d017fc7acc2aec6da0",
+  
+  
 
 
 
