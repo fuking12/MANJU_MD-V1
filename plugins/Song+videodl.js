@@ -40,9 +40,9 @@ MADE BY MANJU_MD V1 ✅
 
         // Download audio
         let down = await fg.yta(url);
-        if (!down || !down.dl_url) return reply("Failed to get download URL");
-
         let downloadUrl = down.dl_url;
+
+        
 
         // Send audio message
         await robin.sendMessage(from, { audio: { url: downloadUrl }, mimetype: "audio/mpeg" }, { quoted: mek });
