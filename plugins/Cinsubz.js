@@ -1,50 +1,64 @@
-const axios = require('axios');
+const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 const { cmd } = require("../command");
 
 async function getMovieDetailsAndDownloadLinks(query) {
+  let browser;
   try {
     console.log(`Searching for: ${query}`);
-    // Axios එකෙන් search page එකට request එකක් යවන්න
-    const response = await axios.get(`https://cinesubz.co/?s=${encodeURIComponent(query)}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-      },
-      timeout: 60000
+    // Launch Puppeteer browser
+    browser = await puppeteer.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'] // Required for Heroku/VPS
+    });
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36');
+    await page.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1'
     });
 
-    const html = response.data;
+    // Navigate to search page
+    console.log(`Navigating to: https://cinesubz.co/?s=${encodeURIComponent(query)}`);
+    await page.goto(`https://cinesubz.co/?s=${encodeURIComponent(query)}`, { 
+      waitUntil: 'networkidle2',
+      timeout: 60000 
+    });
+    const html = await page.content();
     const $ = cheerio.load(html);
     const films = [];
 
-    // Search results එකෙන් films extract කරන්න
-    $('article').each((i, element) => {
-      const filmName = $(element).find('.details .title a').text().trim();
-      const imageUrl = $(element).find('.image .thumbnail img').attr('src');
-      const description = $(element).find('.details .contenido p').text().trim();
-      const year = $(element).find('.details .meta .year').text().trim();
-      const imdbText = $(element).find('.details .meta .rating:first').text().trim();
-      const imdb = imdbText.replace('IMDb', '').trim();
-      const movieLink = $(element).find('.image .thumbnail a').attr('href');
-      films.push({ filmName, imageUrl, description, year, imdb, movieLink });
+    // Extract films from search results
+    console.log('Parsing search results...');
+    $('article, .post, .item').each((i, element) => {
+      const filmName = $(element).find('.details .title a, .post-title a, .item-title a').text().trim() || 'Unknown Title';
+      const imageUrl = $(element).find('.image .thumbnail img, .poster img, .img img').attr('src') || '';
+      const description = $(element).find('.details .contenido p, .excerpt p, .description p').text().trim() || 'No description available';
+      const year = $(element).find('.details .meta .year, .meta .release-year, .year').text().trim() || 'Unknown';
+      const imdbText = $(element).find('.details .meta .rating:first, .meta .imdb, .rating').text().trim();
+      const imdb = imdbText.replace(/IMDb/i, '').trim() || 'N/A';
+      const movieLink = $(element).find('.image .thumbnail a, .post-title a, .item-title a').attr('href') || '';
+      if (filmName && movieLink) {
+        console.log(`Found film: ${filmName}, Link: ${movieLink}`);
+        films.push({ filmName, imageUrl, description, year, imdb, movieLink });
+      }
     });
 
     console.log(`Found ${films.length} films`);
 
+    // Fetch download links for each film
     for (const film of films) {
-      if (!film.movieLink) continue;
+      if (!film.movieLink) {
+        console.log(`Skipping ${film.filmName} due to missing link`);
+        continue;
+      }
 
       console.log(`Fetching page: ${film.movieLink}`);
-      // Delay එකක් යොදන්න
-      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 seconds delay
-      const moviePageResponse = await axios.get(film.movieLink, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-        },
-        timeout: 60000
-      });
-
-      const moviePageHtml = moviePageResponse.data;
+      await new Promise(resolve => setTimeout(resolve, 5000)); // 5-second delay
+      await page.goto(film.movieLink, { waitUntil: 'networkidle2', timeout: 60000 });
+      const moviePageHtml = await page.content();
       const $$ = cheerio.load(moviePageHtml);
       const downloadLinks = [];
 
@@ -73,7 +87,6 @@ async function getMovieDetailsAndDownloadLinks(query) {
         $$(selector).each((index, element) => {
           const link = $$(element).attr('href') || '';
           const qualityText = $$(element).text().trim().toLowerCase();
-
           console.log(`Found link: ${link}, Text: ${qualityText}`);
 
           if (link && !qualityText.includes('telegram')) {
@@ -100,9 +113,11 @@ async function getMovieDetailsAndDownloadLinks(query) {
       film.downloadLinks = downloadLinks;
     }
 
+    await browser.close();
     return films;
   } catch (error) {
     console.error('❌ Error occurred:', error.message);
+    if (browser) await browser.close();
     return [];
   }
 }
@@ -142,7 +157,8 @@ cmd({
     const films = await getMovieDetailsAndDownloadLinks(q);
 
     if (films.length === 0) {
-      return reply('❌ No movies found for your query.');
+      await m.react('❌');
+      return reply('❌ No movies found for your query. Try a different search term or check the website.');
     }
 
     let filmListMessage = "📢 *\`Money Heist MD\`*\n\n🎥 *Movie Search Results*\n*Reply Number ⤵️*\n\n";
@@ -158,7 +174,7 @@ cmd({
       caption: `${filmListMessage}\n\n${kramretaw}`,
       contextInfo: {
         forwardingScore: 1,
-        isForwarded: true, 
+        isForwarded: true,
         forwardedNewsletterMessageInfo: {
           newsletterJid: '120363398681287064@newsletter',
           newsletterName: "Money Heist MD ツ",
@@ -198,7 +214,7 @@ cmd({
           }
 
           const sentMessage1 = await conn.sendMessage(from, {
-            image: { url: `${film.imageUrl}` },
+            image: { url: film.imageUrl || "https://drive.google.com/uc?export=download&id=16ub1c6GS8fxBLEHfRdEvCa2jyLGChB1p" },
             caption: `${filmDetailsMessage}\n\n${kramretaw}`,
             contextInfo: {
               forwardingScore: 1,
@@ -246,7 +262,7 @@ cmd({
                 }
 
                 await conn.sendMessage(from, {
-                  document: { url: `${selectedLink.link}` },
+                  document: { url: selectedLink.link },
                   mimetype: "video/mp4",
                   fileName: `${film.filmName}.mp4`,
                   caption: `*🎥 ${film.filmName}*\n\n*⏳ Year ${film.year}*\n*⭐ Rating ${film.imdb}*\n*📦 Size ${selectedLink.size}*\n\n> 📝 *${film.description}*\n\n${kramretaw}`
@@ -266,7 +282,8 @@ cmd({
       }
     });
   } catch (error) {
-    console.error(error);
-    reply('⚠️ An error occurred while searching for films.');
+    console.error('Error in command handler:', error.message);
+    await m.react('❌');
+    reply('⚠️ An error occurred while searching for films. Please try again later.');
   }
 });
