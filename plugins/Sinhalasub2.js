@@ -35,7 +35,7 @@ const manjuTheme = {
 
 // Film search and download command
 cmd({
-  pattern: "cinsubz",
+  pattern: "cinesubz",
   react: "🎬",
   desc: "Enjoy cinema from MANJU_MD's treasury of films with Sinhala subtitles",
   category: "movie vault",
@@ -44,7 +44,7 @@ cmd({
   if (!q) {
     await conn.sendMessage(from, {
       text: manjuTheme.box("Royal Decree", 
-        "🎬 Usage: . cinsubz <movie name or URL>\n🎬 Example: . cinsubz Deadpool or . cinsubz https://cinesubz.co/...\n🎬 Vault: Films with Sinhala Subtitles\n🎬 Reply 'done' to stop"),
+        "🎬 Usage: . cinesubz <movie name or URL>\n🎬 Example: . cinesubz Deadpool or . cinesubz https://cinesubz.co/...\n🎬 Vault: Films with Sinhala Subtitles\n🎬 Reply 'done' to stop"),
       ...manjuTheme.getForwardProps()
     }, { quoted: mek });
     return;
@@ -69,11 +69,12 @@ cmd({
         try {
           const downloadResponse = await axios.get(downloadUrl, { timeout: 10000 });
           downloadData = downloadResponse.data;
+          console.log("Download API Response:", downloadData); // Log the response
           break;
         } catch (error) {
           downloadRetries--;
           if (downloadRetries === 0) {
-            throw new Error("Failed to retrieve download link from Cinesubz");
+            throw new Error("Failed to retrieve download link from Cinesubz: " + error.message);
           }
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
@@ -153,16 +154,17 @@ cmd({
           try {
             const searchResponse = await axios.get(searchUrl, { timeout: 10000 });
             searchData = searchResponse.data;
+            console.log("Search API Response:", searchData); // Log the response
             break;
           } catch (error) {
             retries--;
-            if (retries === 0) throw new Error("Failed to retrieve data from Cinesubz");
+            if (retries === 0) throw new Error("Failed to retrieve data from Cinesubz: " + error.message);
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
 
         if (!searchData.movies || searchData.movies.length === 0) {
-          throw new Error("No films found in Cinesubz");
+          throw new Error("No films found in Cinesubz. Response: " + JSON.stringify(searchData));
         }
 
         searchCache.set(cacheKey, searchData);
@@ -202,7 +204,7 @@ cmd({
 
         // Exit condition
         if (replyText.toLowerCase() === "done") {
-          conn.ev.off("messages.upsert", selectionHandler);
+          conn.ev.off("messages accomp.upsert", selectionHandler);
           downloadOptionsMap.clear();
           await conn.sendMessage(from, {
             text: manjuTheme.box("Farewell", 
@@ -242,6 +244,7 @@ cmd({
             try {
               const downloadResponse = await axios.get(downloadUrl, { timeout: 10000 });
               downloadData = downloadResponse.data;
+              console.log("Download API Response:", downloadData); // Log the response
               break;
             } catch (error) {
               downloadRetries--;
