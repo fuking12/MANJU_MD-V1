@@ -2,7 +2,7 @@ const { cmd, commands } = require('../command');
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-// Store user state (in-memory, replace with DB for production)
+// Store user state (in-memory)
 const userState = new Map();
 
 cmd({
@@ -14,40 +14,40 @@ cmd({
     const input = args.join(' ').trim();
     if (!input) return reply('කරුණාකර movie නමක්, number එකක්, හෝ quality number එකක් දෙන්න! උදා: !cinesubz Odela 2024');
 
-    // Check user state
     let state = userState.get(from) || { step: 'search', movies: [], selectedMovie: null, qualities: [] };
 
     // Step 1: Movie Search
     if (state.step === 'search') {
         try {
-            const response = await axios.get(`https://chathurahansaka.netlify.app/?q=${encodeURIComponent(input)}`);
+            const response = await axios.get(`https://chathurahansaka.netlify.app/?q=${encodeURIComponent(input)}`, { timeout: 10000 });
             const $ = cheerio.load(response.data);
 
-            // Extract movie data (adjust selectors based on actual HTML structure)
+            // Try multiple selectors to extract movies
             const movies = [];
-            $('div.movie-item').each((i, elem) => { // Example selector
-                const title = $(elem).find('a.title').text().trim() || 'Unknown Title';
-                const url = $(elem).find('a.title').attr('href') || 'N/A';
-                movies.push({ title, url });
+            $('div[class*="movie"], li[class*="movie"], .movie-item, .movie-card, .result').each((i, elem) => {
+                const title = $(elem).find('a[class*="title"], .movie-title, h2, h3, a[href*="cinesubz"]').text().trim() || `Movie ${i + 1}`;
+                const url = $(elem).find('a[class*="title"], .movie-title, a[href*="cinesubz"]').attr('href') || '';
+                if (url && url.startsWith('https://cinesubz.co')) {
+                    movies.push({ title, url });
+                }
             });
 
             if (movies.length === 0) {
-                return reply('කිසිදු movie එකක් හමුවුණේ නැහැ!');
+                return reply('කිසිදු movie එකක් හමුවුණේ නැහැ! Query එක බලලා ආයෙ උත්සාහ කරන්න (උදා: !cinesubz Odela 2).');
             }
 
-            // Store movies in user state
             state = { step: 'select_movie', movies, selectedMovie: null, qualities: [] };
             userState.set(from, state);
 
             let replyText = '🔍 Cinesubz Search Results:\n';
-            movies.slice(0, 10).forEach((movie, index) => { // Limit to 10 results
+            movies.slice(0, 10).forEach((movie, index) => {
                 replyText += `${index + 1}. ${movie.title}\nLink: ${movie.url}\n\n`;
             });
             replyText += 'විස්තර බලන්න: !cinesubz <number> (උදා: !cinesubz 1)';
             await reply(replyText);
         } catch (error) {
-            await reply('Search API එකට සම්බන්ධ වෙන්න බැරි වුණා! ආයෙ උත්සාහ කරන්න.');
-            console.error('Search Error:', error);
+            await reply('Search API එකට සම්බන්ධ වෙන්න බැරි වුණා! Query එක බලලා ආයෙ උත්සාහ කරන්න.');
+            console.error('Search Error:', error.message);
         }
         return;
     }
@@ -60,31 +60,30 @@ cmd({
         }
 
         const selectedMovie = state.movies[movieIndex];
-        if (!selectedMovie.url.startsWith('https://cinesubz.co')) {
-            return reply('කරුණාකර valid cinesubz URL එකක් තෝරන්න!');
-        }
-
         try {
-            const response = await axios.get(`https://chathurahansakamvd.netlify.app/mvd?url=${encodeURIComponent(selectedMovie.url)}`);
+            const response = await axios.get(`https://chathurahansakamvd.netlify.app/mvd?url=${encodeURIComponent(selectedMovie.url)}`, { timeout: 10000 });
             const $ = cheerio.load(response.data);
 
-            // Extract movie details (adjust selectors)
+            // Extract movie details
             const details = {
-                title: $('h1.movie-title').text().trim() || 'N/A',
-                description: $('div.description').text().trim() || 'N/A',
-                releaseDate: $('span.release-date').text().trim() || 'N/A',
-                genre: $('span.genre').text().trim() || 'N/A'
+                title: $('h1[class*="title"], .movie-title, h2, h3').text().trim() || 'N/A',
+                description: $('div[class*="description"], .synopsis, p[class*="desc"]').text().trim() || 'N/A',
+                releaseDate: $('span[class*="release"], .release-date, .date').text().trim() || 'N/A',
+                genre: $('span[class*="genre"], .genres, .category').text().trim() || 'N/A'
             };
 
-            // Extract quality options (assume available in details response)
+            // Extract quality options
             const qualities = [];
-            $('div.quality-option').each((i, elem) => { // Example selector
-                const quality = $(elem).find('span.quality').text().trim() || `Quality ${i + 1}`;
-                const url = $(elem).attr('data-url') || selectedMovie.url; // Assume URL for download
-                qualities.push({ quality, url });
+            $('div[class*="quality"], .quality-option, a[class*="quality"], .download-option').each((i, elem) => {
+                const quality = $(elem).find('span[class*="quality"], .quality-text').text().trim() || `Quality ${i + 1}`;
+                const url = $(elem).attr('data-url') || $(elem).attr('href') || selectedMovie.url;
+                if (url) qualities.push({ quality, url });
             });
 
-            // Update state
+            if (qualities.length === 0) {
+                qualities.push({ quality: 'Default', url: selectedMovie.url }); // Fallback
+            }
+
             state = { step: 'select_quality', movies: state.movies, selectedMovie, qualities };
             userState.set(from, state);
 
@@ -101,7 +100,7 @@ cmd({
             await reply(replyText);
         } catch (error) {
             await reply('විස්තර ලබාගන්න බැරි වුණා! ආයෙ උත්සාහ කරන්න.');
-            console.error('Details Error:', error);
+            console.error('Details Error:', error.message);
         }
         return;
     }
@@ -115,17 +114,16 @@ cmd({
 
         const selectedQuality = state.qualities[qualityIndex];
         try {
-            const response = await axios.get(`https://chathuramvdl.netlify.app/functions/mvdl?url=${encodeURIComponent(selectedQuality.url)}`);
+            const response = await axios.get(`https://chathuramvdl.netlify.app/functions/mvdl?url=${encodeURIComponent(selectedQuality.url)}`, { timeout: 10000 });
             const $ = cheerio.load(response.data);
 
-            // Extract download link (adjust selector)
-            const downloadLink = $('a.download-link').attr('href') || 'N/A';
+            // Extract download link
+            const downloadLink = $('a[class*="download"], .download-link, a[href*="download"]').attr('href') || 'N/A';
 
             if (downloadLink === 'N/A') {
-                return reply('Download link හමුවුණේ නැහැ!');
+                return reply('Download link හමුවුණේ නැහැ! URL එක බලලා ආයෙ උත්සාහ කරන්න.');
             }
 
-            // Reset state after download
             userState.delete(from);
 
             let replyText = '📥 Cinesubz Download Link:\n';
@@ -135,11 +133,10 @@ cmd({
             await reply(replyText);
         } catch (error) {
             await reply('Download link ලබාගන්න බැරි වුණා! ආයෙ උත්සාහ කරන්න.');
-            console.error('Download Error:', error);
+            console.error('Download Error:', error.message);
         }
         return;
     }
 
-    // If input doesn't match expected format
     await reply('වැරදි input! Search කරන්න: !cinesubz <movie_name>, Movie select කරන්න: !cinesubz <number>, Quality select කරන්න: !cinesubz <quality_number>');
 });
