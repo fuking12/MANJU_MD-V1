@@ -44,7 +44,7 @@ cmd({
   if (!q) {
     await conn.sendMessage(from, {
       text: manjuTheme.box("Royal Decree", 
-        "🎬 Usage: . cinesubz <movie name or URL>\n🎬 Example: . cinesubz Deadpool or . cinesubz https://cinesubz.co/...\n🎬 Vault: Films with Sinhala Subtitles\n🎬 Reply 'done' to stop"),
+        "🎬 Usage: .cinesubz <movie name or URL>\n🎬 Example: .cinesubz Deadpool or .cinesubz https://cinesubz.co/...\n🎬 Vault: Films with Sinhala Subtitles\n🎬 Reply 'done' to stop"),
       ...manjuTheme.getForwardProps()
     }, { quoted: mek });
     return;
@@ -148,7 +148,7 @@ cmd({
       let searchData = searchCache.get(cacheKey);
 
       if (!searchData) {
-        const searchUrl = `https://chathurahansaka.netlify.app/?q=${encodeURIComponent(q)}`;
+        const searchUrl = `https://chathurahansaka.netlify.app/.netlify/functions/scraper?q=${encodeURIComponent(q)}`; // Updated endpoint
         let retries = 3;
         while (retries > 0) {
           try {
@@ -163,19 +163,24 @@ cmd({
           }
         }
 
-        if (!searchData.movies || searchData.movies.length === 0) {
+        // Check if response is valid JSON with movies or results
+        if (!searchData || (!searchData.movies && !searchData.results) || 
+            (searchData.movies && searchData.movies.length === 0) || 
+            (searchData.results && searchData.results.length === 0)) {
           throw new Error("No films found in Cinesubz. Response: " + JSON.stringify(searchData));
         }
 
-        searchCache.set(cacheKey, searchData);
+        // Use movies or results based on response
+        const filmsData = searchData.movies || searchData.results;
+        searchCache.set(cacheKey, { movies: filmsData });
       }
 
       // Format movie list
       let filmList = `Cinesubz Movie Results 🎬\n\nInput: ${q}\n\nReply Below Number 🔢,\ncinesubz.co results\n\n`;
       const films = searchData.movies.map((film, index) => ({
         number: index + 1,
-        title: film.title,
-        link: film.url,
+        title: film.title || film.name, // Adjust based on actual field
+        link: film.url || film.link,    // Adjust based on actual field
         image: null // Image not provided in search API
       }));
 
@@ -204,7 +209,7 @@ cmd({
 
         // Exit condition
         if (replyText.toLowerCase() === "done") {
-          conn.ev.off("messages accomp.upsert", selectionHandler);
+          conn.ev.off("messages.upsert", selectionHandler);
           downloadOptionsMap.clear();
           await conn.sendMessage(from, {
             text: manjuTheme.box("Farewell", 
