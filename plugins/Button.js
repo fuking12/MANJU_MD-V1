@@ -1,17 +1,17 @@
-const { cmd } = require("../command");
+const { cmd } = require("../command");   // require command.js
 
 // Button mode state
 let isButtonMode = false;
 
 // Command to toggle button mode
 cmd({
-  pattern: "mode",
-  desc: "Toggle button mode on or off",
-  category: "Utility",
-  filename: __filename,
+  pattern: "mode",   // pattern 
+  desc: "Toggle button mode on or off",  // desc
+  category: "Utility",  // category 
+  filename: __filename,  // filename
 }, async (conn, mek, m, { from, q, reply }) => {
   try {
-    const mode = q.toLowerCase().trim();
+    const mode = q.toLowerCase().trim();   // WARNING ✓ DON'T CHANGE CODE
 
     if (mode === "button") {
       isButtonMode = true;
