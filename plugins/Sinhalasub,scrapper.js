@@ -1,91 +1,90 @@
+const { cmd } = require("../command");
+const axios = require("axios");
+const cheerio = require("cheerio");
+
+// Helper function for fetchJson (assuming it's not defined in your framework)
+async function fetchJson(url) {
+  try {
+    const response = await axios.get(url);
+    return response.data;
+  } catch (error) {
+    throw new Error(`Failed to fetch JSON: ${error.message}`);
+  }
+}
+
+// SinhalaSub Movie Search Command
 cmd(
   {
     pattern: "sinhalasub",
     alias: ["movie", "film", "cine", "cs", "ss", "cinesubz"],
-    use: ".movie *<movie name>*",
+    use: ".sinhalasub <movie name>",
     react: "🍟",
-    desc: "Search and DOWNLOAD VIDEOS from sinhala sub.",
+    desc: "Search and download videos from SinhalaSub",
     category: "movie",
     filename: __filename,
   },
-
-  async (
-    conn,
-    mek,
-    m,
-    {
-      from,
-      l,
-      prefix,
-      quoted,
-      body,
-      isCmd,
-      command,
-      args,
-      q,
-      isGroup,
-      sender,
-      senderNumber,
-      botNumber2,
-      botNumber,
-      pushname,
-      isMe,
-      isOwner,
-      groupMetadata,
-      groupName,
-      participants,
-      groupAdmins,
-      isBotAdmins,
-      isAdmins,
-      reply,
-    }
-  ) => {
+  async (conn, mek, m, { from, q, reply }) => {
     try {
+      // Check if chat is banned
       const ismvban = await getban(from);
-        if (ismvban) {
-          return m.reply("➟ *This Chat Has Been banned from using Movie Commands.....*\n\n*_Please contact ot Owner to UnBan_* 👨‍🔧\n");
+      if (ismvban) {
+        return reply("➟ *This Chat Has Been banned from using Movie Commands...*\n\n*_Please contact owner to UnBan_* 👨‍🔧");
       }
-      let x = await getcinep(sender);
-      let y = await getcinefree()
-      if (!x && !y) {
-        return await reply("🚩 You are not a premium user\nbuy via message to owner!!\nwa.me/94759874797");
+
+      // Check premium or free user status
+      const isPremium = await getcinep(sender);
+      const isFree = await getcinefree();
+      if (!isPremium && !isFree) {
+        return reply("🚩 You are not a premium user\nBuy via message to owner!!\nwa.me/94759874797");
       }
-      if (!q) return reply("🚩 *Please give me words to search*");
-      var ress = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/search?q=${q}`)
-      let wm = config.MOVIE_FOOTER;
-      const msg = `乂 *M O V I E - S E A R C H*`;
-      if (ress.length < 1 )
+
+      // Validate query
+      if (!q) return reply("🚩 *Please give me a movie name to search*");
+
+      // Fetch movie search results
+      const ress = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/search?q=${encodeURIComponent(q)}`);
+
+      // Check if results are empty
+      if (!ress || ress.length < 1) {
         return await conn.sendMessage(
           from,
           { text: "🚩 *I couldn't find anything :(*" },
           { quoted: mek }
         );
-var rows = ress.map((v) => ({
-    title: `${v.title} - ${v.year}`,
-    rowId: `${prefix}ssmdl ${v.link}`
-}));
-      
+      }
 
-const listMessage = {
-    text: msg, // Message text
-    image: "https://i.ibb.co/0q34kPZ/image.png",
-    footer: config.MOVIE_FOOTER,
-    title: 'Select a Movie', // Title for the list
-    buttonText: '*🔢 Reply below number*', // Button text
-    sections: [{
-        title: "*sinhalasub.lk*",
-        rows: 
-    }]
-};
+      // Prepare list message
+      const msg = `乂 *M O V I E - S E A R C H*\n\n*Search Query*: ${q}\n\n*Select a movie from the list below:*`;
+      const rows = ress.map((v, index) => ({
+        title: `${v.title} (${v.year})`,
+        rowId: `.ssmdl ${v.link}`,
+      }));
 
-await conn.listMessage(from, listMessage, mek);
+      const listMessage = {
+        text: msg,
+        footer: config.MOVIE_FOOTER || "Powered by SinhalaSub",
+        title: "Select a Movie",
+        buttonText: "🔢 Select Movie",
+        sections: [
+          {
+            title: "Movies from sinhalasub.lk",
+            rows: rows,
+          },
+        ],
+      };
+
+      // Send list message
+      await conn.sendMessage(from, listMessage, { quoted: mek });
+      await conn.sendMessage(from, { react: { text: "🍟", key: mek.key } });
     } catch (e) {
-      console.log(e);
-      await conn.sendMessage(from, { text: "🚩 *Error !!*" }, { quoted: mek });
+      console.error("Error:", e);
+      await reply(`🚩 *Error: ${e.message || "Something went wrong!"}*`);
+      await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
     }
   }
 );
 
+// Movie Details and Download Links Command
 cmd(
   {
     pattern: "ssmdl",
@@ -93,67 +92,69 @@ cmd(
     react: "🍟",
     filename: __filename,
   },
-  async (conn, mek, m, { from, prefix, q }) => {
+  async (conn, mek, m, { from, q, reply }) => {
     try {
+      // Check if chat is banned
       const ismvban = await getban(from);
-        if (ismvban) {
-          return m.reply("➟ *This Chat Has Been banned from using Movie Commands.....*\n\n*_Please contact ot Owner to UnBan_* 👨‍🔧\n");
-        }
-      // if (!isMe) return await reply('🚩 You are not a premium user\nbuy via message to owner!!')
-      if (!q) return reply("🚩 *Please give me a url*");
+      if (ismvban) {
+        return reply("➟ *This Chat Has Been banned from using Movie Commands...*\n\n*_Please contact owner to UnBan_* 👨‍🔧");
+      }
 
-      let wm = config.MOVIE_FOOTER;
+      // Validate URL
+      if (!q) return reply("🚩 *Please provide a movie URL*");
 
-      var result = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/details?url=${q}`)
+      // Fetch movie details
+      const result = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/details?url=${encodeURIComponent(q)}`);
 
-      const msg = `乂 *S I N H A L A S U B - D L*
-        
- *◦ Title :* ${result.title}
- *◦ Date :* ${result.releaseDate}
- *◦ Mean :* ${result.tagline}
- *◦ Duration :* ${result.duration}
- *◦ Imdb rating :* ${result.imdbRating}
- *◦ Genres :* ${result.genres.join(", ")}
- *◦ Rating :* ${result.ratingCount}
- `;
+      // Prepare message
+      const msg = `乂 *S I N H A L A S U B - D L*\n\n` +
+                  `*◦ Title*: ${result.title}\n` +
+                  `*◦ Date*: ${result.releaseDate}\n` +
+                  `*◦ Tagline*: ${result.tagline || "N/A"}\n` +
+                  `*◦ Duration*: ${result.duration || "N/A"}\n` +
+                  `*◦ IMDb Rating*: ${result.imdbRating || "N/A"}\n` +
+                  `*◦ Genres*: ${result.genres ? result.genres.join(", ") : "N/A"}\n` +
+                  `*◦ Rating*: ${result.ratingCount || "N/A"}\n\n` +
+                  `*Select a download option below:*`;
 
-      let raw = [];
-      raw.push({
-        title: `Send Detail Card`,
-        rowId: `${prefix}ssde ${q}`,
-      });
-
-      result.downloadLinks.map((v) => {
-        raw.push({
-          title: `${v.server} - ${v.quality} - ${v.size}`,
-          rowId: `${prefix}gss ${v.link}±${result.title}±${result.image}`,
-        });
-      });
-
-      const sections = [
+      // Prepare rows for download options
+      const rows = [
         {
-          title: "sinhalasub.lk",
-          rows: raw,
+          title: "View Detail Card",
+          rowId: `.ssde ${q}`,
         },
+        ...result.downloadLinks.map((v) => ({
+          title: `${v.server} - ${v.quality} (${v.size})`,
+          rowId: `.gss ${v.link}±${result.title}±${result.image}`,
+        })),
       ];
 
       const listMessage = {
-        image: result.image,
+        image: { url: result.image || "https://i.ibb.co/0q34kPZ/image.png" },
         text: msg,
-        footer: config.MOVIE_FOOTER,
-        title: "sended details",
-        buttonText: "Select a number",
-        sections,
+        footer: config.MOVIE_FOOTER || "Powered by SinhalaSub",
+        title: "Movie Download Options",
+        buttonText: "🔢 Select Option",
+        sections: [
+          {
+            title: "sinhalasub.lk",
+            rows: rows,
+          },
+        ],
       };
-      await conn.listMessage(from, listMessage, mek);
+
+      // Send list message
+      await conn.sendMessage(from, listMessage, { quoted: mek });
+      await conn.sendMessage(from, { react: { text: "🍟", key: mek.key } });
     } catch (e) {
-      console.log(e);
-      await reply(`${e}`);
-      await conn.sendMessage(from, { text: "🚩 *Error !!*" }, { quoted: mek });
+      console.error("Error:", e);
+      await reply(`🚩 *Error: ${e.message || "Failed to fetch movie details"}*`);
+      await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
     }
   }
-);;
+);
 
+// Movie Details Card Command
 cmd(
   {
     pattern: "ssde",
@@ -161,110 +162,108 @@ cmd(
     react: "🍎",
     filename: __filename,
   },
-  async (
-    conn,
-    mek,
-    m,
-    {
-      from,
-      l,
-      quoted,
-      body,
-      isCmd,
-      command,
-      args,
-      q,
-      isGroup,
-      sender,
-      senderNumber,
-      botNumber2,
-      botNumber,
-      pushname,
-      isMe,
-      isOwner,
-      groupMetadata,
-      groupName,
-      participants,
-      groupAdmins,
-      isBotAdmins,
-      isAdmins,
-      reply,
-    }
-  ) => {
+  async (conn, mek, m, { from, q, reply }) => {
     try {
+      // Check if chat is banned
       const ismvban = await getban(from);
-        if (ismvban) {
-          return m.reply("➟ *This Chat Has Been banned from using Movie Commands.....*\n\n*_Please contact ot Owner to UnBan_* 👨‍🔧\n");
-        }
-      var result = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/details?url=${q}`)
-      let info = await minimize(`乂 *M O V I E - I N F O*
-        
- *◦ Title :* ${result.title}
- *◦ Date :* ${result.releaseDate}
- *◦ Mean :* ${result.tagline}
- *◦ Duration :* ${result.duration}
- *◦ Imdb rating :* ${result.imdbRating}
- *◦ Genres :* ${result.genres.join(", ")}
- *◦ Rating :* ${result.ratingCount}
+      if (ismvban) {
+        return reply("➟ *This Chat Has Been banned from using Movie Commands...*\n\n*_Please contact owner to UnBan_* 👨‍🔧");
+      }
 
- ${config.MOVIE_FOOTER}`)
-      return await conn.sendMessage(
+      // Validate URL
+      if (!q) return reply("🚩 *Please provide a movie URL*");
+
+      // Fetch movie details
+      const result = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/details?url=${encodeURIComponent(q)}`);
+
+      // Prepare message
+      const info = `乂 *M O V I E - I N F O*\n\n` +
+                   `*◦ Title*: ${result.title}\n` +
+                   `*◦ Date*: ${result.releaseDate}\n` +
+                   `*◦ Tagline*: ${result.tagline || "N/A"}\n` +
+                   `*◦ Duration*: ${result.duration || "N/A"}\n` +
+                   `*◦ IMDb Rating*: ${result.imdbRating || "N/A"}\n` +
+                   `*◦ Genres*: ${result.genres ? result.genres.join(", ") : "N/A"}\n` +
+                   `*◦ Rating*: ${result.ratingCount || "N/A"}\n\n` +
+                   `${config.MOVIE_FOOTER || "Powered by SinhalaSub"}`;
+
+      // Send detail card
+      await conn.sendMessage(
         from,
-        { image: { url: result.image }, caption: info },
+        {
+          image: { url: result.image || "https://i.ibb.co/0q34kPZ/image.png" },
+          caption: info,
+        },
         { quoted: mek }
       );
+      await conn.sendMessage(from, { react: { text: "🍎", key: mek.key } });
     } catch (e) {
-      console.log(e);
+      console.error("Error:", e);
+      await reply(`🚩 *Error: ${e.message || "Failed to fetch movie details"}*`);
+      await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
     }
   }
 );
 
+// Download Movie Command
 cmd(
   {
     pattern: "gss",
     react: "🍟",
     dontAddCommandList: true,
     filename: __filename,
-}, async (conn, mek, m, { from, q, prefix, reply }) => {
+  },
+  async (conn, mek, m, { from, q, reply }) => {
     try {
+      // Check if chat is banned
       const ismvban = await getban(from);
-        if (ismvban) {
-          return m.reply("➟ *This Chat Has Been banned from using Movie Commands.....*\n\n*_Please contact ot Owner to UnBan_* 👨‍🔧\n");
-        }
-      if (!q) return reply("Need a keyword");
-      const link = q.split("±")[0];
-      const namee = q.split("±")[1] || link;
-      const image = q.split("±")[2] || `https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/74d2a00a-b5c0-42d4-b131-fafcca22e4cf/d7ay4tw-1fa7c44d-2500-43ef-8d40-c16d939ca024.png`
-      const name = namee.replace(/\s+/g, "_");
-      const url = link
-      const response = await fetch(url)
-      const success = await response.text()
-      const $p = cheerio.load(success);
-      const lastLink = $p("#link").attr("href");
-      let dllink;
-      if (lastLink.includes("https://pixeldrain.com/")) {
-        dllink = lastLink.replace("/u/", "/api/file/");
-      } else {
-        dllink = lastLink;
+      if (ismvban) {
+        return reply("➟ *This Chat Has Been banned from using Movie Commands...*\n\n*_Please contact owner to UnBan_* 👨‍🔧");
       }
 
-      const photo = image || "https://picsum.photos/1080?aesthetic"
-      const ima = await resize(photo)
-      const resp = await axios.get(dllink.trim(), { responseType: "arraybuffer" });
+      // Validate query
+      if (!q) return reply("🚩 *Please provide a download link*");
+
+      // Parse query
+      const [link, namee, image] = q.split("±");
+      const name = namee ? namee.replace(/\s+/g, "_") : "Movie_" + Date.now();
+      const photo = image || "https://i.ibb.co/0q34kPZ/image.png";
+
+      // Fetch download page
+      const response = await axios.get(link, { responseType: "text" });
+      const $ = cheerio.load(response.data);
+      let dllink = $("#link").attr("href");
+
+      if (!dllink) {
+        return reply("🚩 *Failed to extract download link*");
+      }
+
+      // Handle PixelDrain links
+      if (dllink.includes("https://pixeldrain.com/")) {
+        dllink = dllink.replace("/u/", "/api/file/");
+      }
+
+      // Download and send file
+      const resp = await axios.get(dllink, { responseType: "arraybuffer" });
       const mediaBuffer = Buffer.from(resp.data, "binary");
-      let exname = 'Pink-Venom-MD🌸' + Date.now();  
-      await conn.sendMessage(from, {
-        document: mediaBuffer,
-        mimetype: "video/mp4",
-        jpegThumbnail: ima,
-        caption: `${name}\n\n${config.MOVIE_FOOTER}`,
-        fileName: `${name || exname}.mp4`,
-      }, { quoted: mek });
+
+      await conn.sendMessage(
+        from,
+        {
+          document: mediaBuffer,
+          mimetype: "video/mp4",
+          fileName: `${name}.mp4`,
+          caption: `${name}\n\n${config.MOVIE_FOOTER || "Powered by SinhalaSub"}`,
+          jpegThumbnail: photo,
+        },
+        { quoted: mek }
+      );
 
       await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
     } catch (e) {
-      reply("Unable to generate");
-      console.log(e);
+      console.error("Error:", e);
+      await reply(`🚩 *Error: ${e.message || "Unable to generate download"}*`);
+      await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
     }
   }
 );
