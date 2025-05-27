@@ -2,7 +2,52 @@ const { cmd } = require("../command");
 const axios = require("axios");
 const cheerio = require("cheerio");
 
-// Helper function for fetchJson (assuming it's not defined in your framework)
+// Dummy implementation of getban (replace with your actual database logic)
+async function getban(chatId) {
+  try {
+    // Simulate a database check for banned chats
+    const bannedChats = ['1234567890@g.us', '9876543210@g.us']; // Replace with actual banned chat IDs
+    return bannedChats.includes(chatId);
+  } catch (error) {
+    console.error("Error in getban:", error);
+    return false; // Default to not banned if error occurs
+  }
+}
+
+// Dummy implementation of getcinep (replace with your actual premium user check)
+async function getcinep(userId) {
+  try {
+    // Simulate a database check for premium users
+    const premiumUsers = ['user1@whatsapp.com', 'user2@whatsapp.com']; // Replace with actual premium user IDs
+    return premiumUsers.includes(userId);
+  } catch (error) {
+    console.error("Error in getcinep:", error);
+    return false; // Default to non-premium if error occurs
+  }
+}
+
+// Dummy implementation of getcinefree (replace with your actual free access check)
+async function getcinefree() {
+  try {
+    // Simulate a check for free access (e.g., during a promotional period)
+    return false; // Set to true if free access is enabled
+  } catch (error) {
+    console.error("Error in getcinefree:", error);
+    return false; // Default to no free access if error occurs
+  }
+}
+
+// Simple implementation of minimize (optimizes text by removing extra spaces)
+async function minimize(text) {
+  try {
+    return text.replace(/\s+/g, ' ').trim();
+  } catch (error) {
+    console.error("Error in minimize:", error);
+    return text; // Return original text if error occurs
+  }
+}
+
+// Helper function for fetchJson
 async function fetchJson(url) {
   try {
     const response = await axios.get(url);
@@ -19,11 +64,11 @@ cmd(
     alias: ["movie", "film", "cine", "cs", "ss", "cinesubz"],
     use: ".sinhalasub <movie name>",
     react: "🍟",
-    desc: "Search and download videos from SinhalaSub",
+    desc: "Search and download movies from SinhalaSub",
     category: "movie",
     filename: __filename,
   },
-  async (conn, mek, m, { from, q, reply }) => {
+  async (conn, mek, m, { from, q, sender, reply }) => {
     try {
       // Check if chat is banned
       const ismvban = await getban(from);
@@ -55,14 +100,13 @@ cmd(
 
       // Prepare list message
       const msg = `乂 *M O V I E - S E A R C H*\n\n*Search Query*: ${q}\n\n*Select a movie from the list below:*`;
-      const rows = ress.map((v, index) => ({
+      const rows = ress.map((v) => ({
         title: `${v.title} (${v.year})`,
         rowId: `.ssmdl ${v.link}`,
       }));
 
       const listMessage = {
         text: msg,
-        footer: config.MOVIE_FOOTER || "Powered by SinhalaSub",
         title: "Select a Movie",
         buttonText: "🔢 Select Movie",
         sections: [
@@ -132,7 +176,6 @@ cmd(
       const listMessage = {
         image: { url: result.image || "https://i.ibb.co/0q34kPZ/image.png" },
         text: msg,
-        footer: config.MOVIE_FOOTER || "Powered by SinhalaSub",
         title: "Movie Download Options",
         buttonText: "🔢 Select Option",
         sections: [
@@ -184,15 +227,17 @@ cmd(
                    `*◦ Duration*: ${result.duration || "N/A"}\n` +
                    `*◦ IMDb Rating*: ${result.imdbRating || "N/A"}\n` +
                    `*◦ Genres*: ${result.genres ? result.genres.join(", ") : "N/A"}\n` +
-                   `*◦ Rating*: ${result.ratingCount || "N/A"}\n\n` +
-                   `${config.MOVIE_FOOTER || "Powered by SinhalaSub"}`;
+                   `*◦ Rating*: ${result.ratingCount || "N/A"}`;
+
+      // Minimize text
+      const minimizedInfo = await minimize(info);
 
       // Send detail card
       await conn.sendMessage(
         from,
         {
           image: { url: result.image || "https://i.ibb.co/0q34kPZ/image.png" },
-          caption: info,
+          caption: minimizedInfo,
         },
         { quoted: mek }
       );
@@ -253,8 +298,8 @@ cmd(
           document: mediaBuffer,
           mimetype: "video/mp4",
           fileName: `${name}.mp4`,
-          caption: `${name}\n\n${config.MOVIE_FOOTER || "Powered by SinhalaSub"}`,
-          jpegThumbnail: photo,
+          caption: `${name}`,
+          thumbnail: photo,
         },
         { quoted: mek }
       );
