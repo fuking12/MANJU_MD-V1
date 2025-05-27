@@ -47,10 +47,13 @@ async function minimize(text) {
   }
 }
 
-// Helper function for fetchJson
+// Helper function for fetchJson with error handling
 async function fetchJson(url) {
   try {
-    const response = await axios.get(url);
+    const response = await axios.get(url, { timeout: 10000 }); // 10-second timeout
+    if (response.status !== 200) {
+      throw new Error(`Request failed with status code ${response.status}`);
+    }
     return response.data;
   } catch (error) {
     throw new Error(`Failed to fetch JSON: ${error.message}`);
@@ -80,17 +83,17 @@ cmd(
       const isPremium = await getcinep(sender);
       const isFree = await getcinefree();
       if (!isPremium && !isFree) {
-        return reply("🚩 You are not a premium user\nBuy via message to owner!!\nwa.me/94759874797");
+        return reply("🚩 You are not a premium user\nBuy via message to owner!!\nwa.me/94766863255");
       }
 
       // Validate query
       if (!q) return reply("🚩 *Please give me a movie name to search*");
 
       // Fetch movie search results
-      const ress = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/search?q=${encodeURIComponent(q)}`);
+      const ress = await fetchJson(`https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`);
 
       // Check if results are empty
-      if (!ress || ress.length < 1) {
+      if (!ress || !ress.results || ress.results.length < 1) {
         return await conn.sendMessage(
           from,
           { text: "🚩 *I couldn't find anything :(*" },
@@ -100,9 +103,9 @@ cmd(
 
       // Prepare list message
       const msg = `乂 *M O V I E - S E A R C H*\n\n*Search Query*: ${q}\n\n*Select a movie from the list below:*`;
-      const rows = ress.map((v) => ({
+      const rows = ress.results.map((v) => ({
         title: `${v.title} (${v.year})`,
-        rowId: `.ssmdl ${v.link}`,
+        rowId: `.ssmdl ${v.url}`,
       }));
 
       const listMessage = {
@@ -148,12 +151,12 @@ cmd(
       if (!q) return reply("🚩 *Please provide a movie URL*");
 
       // Fetch movie details
-      const result = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/details?url=${encodeURIComponent(q)}`);
+      const result = await fetchJson(`https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(q)}`);
 
       // Prepare message
       const msg = `乂 *S I N H A L A S U B - D L*\n\n` +
-                  `*◦ Title*: ${result.title}\n` +
-                  `*◦ Date*: ${result.releaseDate}\n` +
+                  `*◦ Title*: ${result.title || "N/A"}\n` +
+                  `*◦ Date*: ${result.releaseDate || "N/A"}\n` +
                   `*◦ Tagline*: ${result.tagline || "N/A"}\n` +
                   `*◦ Duration*: ${result.duration || "N/A"}\n` +
                   `*◦ IMDb Rating*: ${result.imdbRating || "N/A"}\n` +
@@ -169,7 +172,7 @@ cmd(
         },
         ...result.downloadLinks.map((v) => ({
           title: `${v.server} - ${v.quality} (${v.size})`,
-          rowId: `.gss ${v.link}±${result.title}±${result.image}`,
+          rowId: `.gss ${v.link}±${result.title || "Movie"}±${result.image || "https://i.ibb.co/0q34kPZ/image.png"}`,
         })),
       ];
 
@@ -217,12 +220,12 @@ cmd(
       if (!q) return reply("🚩 *Please provide a movie URL*");
 
       // Fetch movie details
-      const result = await fetchJson(`https://apicinex.vercel.app/api/sinhalasub/movie/details?url=${encodeURIComponent(q)}`);
+      const result = await fetchJson(`https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(q)}`);
 
       // Prepare message
       const info = `乂 *M O V I E - I N F O*\n\n` +
-                   `*◦ Title*: ${result.title}\n` +
-                   `*◦ Date*: ${result.releaseDate}\n` +
+                   `*◦ Title*: ${result.title || "N/A"}\n` +
+                   `*◦ Date*: ${result.releaseDate || "N/A"}\n` +
                    `*◦ Tagline*: ${result.tagline || "N/A"}\n` +
                    `*◦ Duration*: ${result.duration || "N/A"}\n` +
                    `*◦ IMDb Rating*: ${result.imdbRating || "N/A"}\n` +
