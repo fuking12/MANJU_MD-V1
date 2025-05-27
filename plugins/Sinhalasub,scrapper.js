@@ -1,4 +1,4 @@
-const { cmd } = require("../command");
+const { cmd } = require("../command"); 
 const axios = require("axios");
 const cheerio = require("cheerio");
 
@@ -18,7 +18,7 @@ async function getban(chatId) {
 async function getcinep(userId) {
   try {
     // Simulate a database check for premium users
-    const premiumUsers = ['user1@whatsapp.com', 'user2@whatsapp.com']; // Replace with actual premium user IDs
+    const premiumUsers = ['user94766863255@whatsapp.com', 'user2@whatsapp.com']; // Replace with actual premium user IDs
     return premiumUsers.includes(userId);
   } catch (error) {
     console.error("Error in getcinep:", error);
@@ -83,7 +83,7 @@ cmd(
       const isPremium = await getcinep(sender);
       const isFree = await getcinefree();
       if (!isPremium && !isFree) {
-        return reply("🚩 You are not a premium user\nBuy via message to owner!!\nwa.me/94766863255");
+        return reply("🚩 You are not a premium user\nBuy via message to owner!!\nwa.me/94759874797");
       }
 
       // Validate query
@@ -164,17 +164,24 @@ cmd(
                   `*◦ Rating*: ${result.ratingCount || "N/A"}\n\n` +
                   `*Select a download option below:*`;
 
-      // Prepare rows for download options
-      const rows = [
+      // Check if downloadLinks exists and is an array
+      let rows = [
         {
           title: "View Detail Card",
           rowId: `.ssde ${q}`,
         },
-        ...result.downloadLinks.map((v) => ({
+      ];
+      if (result.downloadLinks && Array.isArray(result.downloadLinks) && result.downloadLinks.length > 0) {
+        rows = rows.concat(result.downloadLinks.map((v) => ({
           title: `${v.server} - ${v.quality} (${v.size})`,
           rowId: `.gss ${v.link}±${result.title || "Movie"}±${result.image || "https://i.ibb.co/0q34kPZ/image.png"}`,
-        })),
-      ];
+        })));
+      } else {
+        rows.push({
+          title: "No download links available",
+          rowId: `.ssde ${q}`, // Fallback to detail card
+        });
+      }
 
       const listMessage = {
         image: { url: result.image || "https://i.ibb.co/0q34kPZ/image.png" },
