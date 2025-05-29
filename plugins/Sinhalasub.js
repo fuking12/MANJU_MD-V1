@@ -33,7 +33,7 @@ const frozenTheme = {
   resultEmojis: ["📽️", "🧊", "👑", "🎥", "🎬", "📽️", "🎞️", "❅", "✨", "✧"]
 };
 
-// Function to extract links from any nested structure
+// Function to extract links from API response
 const extractLinks = (data) => {
   let links = [];
 
@@ -43,9 +43,10 @@ const extractLinks = (data) => {
     if (data.error || data.message) {
       throw new Error(`API Error: ${data.error || data.message}`);
     }
+    // Adjusted for dark-yasiya-api.site response structure
     links = data.links || data.downloadLinks || data.data || data.urls || data.download || [];
-    if (data.result && data.result.data && Array.isArray(data.result.data.dl_links)) {
-      links = data.result.data.dl_links;
+    if (data.result && data.result.data && Array.isArray(data.result.data.links)) {
+      links = data.result.data.links; // Adjusted based on common API response
     }
     if (!Array.isArray(links)) {
       for (let key in data) {
@@ -177,22 +178,20 @@ cmd({
     let searchData = searchCache.get(cacheKey);
 
     if (!searchData) {
-      let primarySearchUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`;
-      let fallbackSearchUrl = `https://apicinex.vercel.app/api/sinhalasub/movie/search?q=${encodeURIComponent(q)}`;
+      const searchUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`;
       let retries = 3;
-      let usingFallback = false;
 
       while (retries > 0) {
         try {
-          console.log(`Attempting to fetch from ${primarySearchUrl}...`);
-          const searchResponse = await axios.get(primarySearchUrl, { 
+          console.log(`Attempting to fetch from ${searchUrl}...`);
+          const searchResponse = await axios.get(searchUrl, { 
             timeout: 15000,
             headers: { 
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
           });
           searchData = searchResponse.data;
-          console.log(`API Response from ${primarySearchUrl}:`, JSON.stringify(searchData, null, 2));
+          console.log(`API Response from ${searchUrl}:`, JSON.stringify(searchData, null, 2));
 
           let results;
           if (Array.isArray(searchData)) {
@@ -209,39 +208,10 @@ cmd({
           searchCache.set(cacheKey, searchData);
           break;
         } catch (error) {
-          console.error(`Primary API Error (${primarySearchUrl}):`, error.response?.status || 'No status', error.message);
+          console.error(`Search API Error (${searchUrl}):`, error.response?.status || 'No status', error.message);
           retries--;
           if (retries === 0) {
-            usingFallback = true;
-            try {
-              console.log(`Falling back to ${fallbackSearchUrl}...`);
-              const fallbackResponse = await axios.get(fallbackSearchUrl, { 
-                timeout: 15000,
-                headers: { 
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
-              });
-              searchData = fallbackResponse.data;
-              console.log(`Fallback API Response from ${fallbackSearchUrl}:`, JSON.stringify(searchData, null, 2));
-
-              let results;
-              if (Array.isArray(searchData)) {
-                results = searchData;
-              } else {
-                results = searchData.results || searchData.data || searchData.movies || [];
-              }
-
-              if (!searchData || typeof searchData !== 'object' || !Array.isArray(results) || results.length === 0) {
-                throw new Error("No movies found in fallback API or invalid response structure");
-              }
-
-              searchData = { results };
-              searchCache.set(cacheKey, searchData);
-              break;
-            } catch (fallbackError) {
-              console.error(`Fallback API Error (${fallbackSearchUrl}):`, fallbackError.response?.status || 'No status', fallbackError.message);
-              throw new Error("Failed to obtain information from the Film Treasury: " + (fallbackError.message || "Unknown error"));
-            }
+            throw new Error("Failed to obtain information from the Film Treasury: " + (error.message || "Unknown error"));
           }
           await new Promise(resolve => setTimeout(resolve, 1500));
         }
@@ -259,7 +229,6 @@ cmd({
       year: film.year || "Unknown",
       link: film.url || film.link || "",
       image: film.image || film.imageSrc || "https://i.ibb.co/5Yb4VZy/snowflake.jpg",
-      source: film.source || (film.url?.includes('dark-yasiya-api.site') ? 'dark-yasiya' : 'apicinex')
     }));
 
     films.forEach(film => {
@@ -300,12 +269,7 @@ cmd({
       conn.ev.off("messages.upsert", filmSelectionHandler);
 
       try {
-        let downloadUrl;
-        if (selectedFilm.source === 'dark-yasiya' || selectedFilm.link.includes('dark-yasiya-api.site')) {
-          downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
-        } else {
-          downloadUrl = `https://apicinex.vercel.app/api/sinhalasub/download?url=${encodeURIComponent(selectedFilm.link)}`; // Adjusted endpoint
-        }
+        const downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
         console.log(`Fetching download links from ${downloadUrl} with link: ${selectedFilm.link}...`);
         const downloadResponse = await axios.get(downloadUrl, { 
           timeout: 15000,
@@ -427,7 +391,9 @@ cmd({
       } catch (error) {
         console.error("Download Error:", error.response?.status || 'No status', error.message);
         let errorMessage = "Failed to get download links: " + error.message;
-        if (error.response?.status === 404) {
+        if (error.response?.status === 403) {
+          errorMessage = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host (e.g., katabump) or request IP whitelisting from the API provider.`;
+        } else if (error.response?.status === 404) {
           errorMessage = `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server.\nPlease try a different movie or check the link: ${selectedFilm.link}`;
         }
         await conn.sendMessage(from, {
@@ -441,10 +407,11 @@ cmd({
 
   } catch (error) {
     console.error("Error in film command:", error.response?.status || 'No status', error.message);
-    const errorMsg = frozenTheme.box("Error", 
-      `Sorry, an error occurred:\n\n${error.message || "Unknown error"}\n\nPlease try again later`);
-    
-    await reply(errorMsg);
+    let errorMsg = `Sorry, an error occurred:\n\n${error.message || "Unknown error"}\n\nPlease try again later`;
+    if (error.response?.status === 403) {
+      errorMsg = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host (e.g., katabump) or request IP whitelisting from the API provider.`;
+    }
+    await reply(frozenTheme.box("Error", errorMsg));
     await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
   }
 });
