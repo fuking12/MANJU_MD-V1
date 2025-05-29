@@ -1,4 +1,4 @@
-1const { cmd } = require("../command"); 
+const { cmd } = require("../command"); 
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const ffmpeg = require('fluent-ffmpeg');
@@ -80,6 +80,7 @@ const downloadAndSplitVideo = async (url, outputDir, fileName) => {
       await new Promise((resolve, reject) => {
         const file = fs.createWriteStream(videoPath);
         https.get(url, (response) => {
+          console.log(`Downloading from ${url}, status: ${response.statusCode}`);
           if (response.statusCode !== 200) {
             file.close();
             fs.unlinkSync(videoPath);
@@ -183,7 +184,11 @@ cmd({
 
       while (retries > 0) {
         try {
-          const searchResponse = await axios.get(searchUrl, { timeout: 15000 });
+          console.log(`Attempting to fetch from ${searchUrl}...`);
+          const searchResponse = await axios.get(searchUrl, { 
+            timeout: 15000,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+          });
           searchData = searchResponse.data;
           console.log(`API Response from ${searchUrl}:`, JSON.stringify(searchData, null, 2));
 
@@ -202,12 +207,16 @@ cmd({
           searchCache.set(cacheKey, searchData);
           break;
         } catch (error) {
-          console.error(`Search API Error (${searchUrl}):`, error.response?.status, error.message);
+          console.error(`Search API Error (${searchUrl}):`, error.response?.status || 'No status', error.message);
           retries--;
           if (retries === 0) {
             usingFallback = true;
             try {
-              const fallbackResponse = await axios.get(fallbackSearchUrl, { timeout: 15000 });
+              console.log(`Falling back to ${fallbackSearchUrl}...`);
+              const fallbackResponse = await axios.get(fallbackSearchUrl, { 
+                timeout: 15000,
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+              });
               searchData = fallbackResponse.data;
               console.log(`Fallback API Response from ${fallbackSearchUrl}:`, JSON.stringify(searchData, null, 2));
 
@@ -226,7 +235,7 @@ cmd({
               searchCache.set(cacheKey, searchData);
               break;
             } catch (fallbackError) {
-              console.error(`Fallback API Error (${fallbackSearchUrl}):`, fallbackError.response?.status, fallbackError.message);
+              console.error(`Fallback API Error (${fallbackSearchUrl}):`, fallbackError.response?.status || 'No status', fallbackError.message);
               throw new Error("Failed to obtain information from the Film Treasury: " + (fallbackError.message || "Unknown error"));
             }
           }
@@ -287,7 +296,11 @@ cmd({
 
       try {
         let downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
-        const downloadResponse = await axios.get(downloadUrl, { timeout: 15000 });
+        console.log(`Fetching download links from ${downloadUrl}...`);
+        const downloadResponse = await axios.get(downloadUrl, { 
+          timeout: 15000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+        });
         let downloadData = downloadResponse.data;
 
         console.log(`Download API Response from ${downloadUrl}:`, JSON.stringify(downloadData, null, 2));
@@ -313,7 +326,7 @@ cmd({
           downloadMessageText += `${link.number}. ${link.quality} (${link.size})\n`;
         });
 
-        downloadMessageText += `\nReply with the quality number to get the download link\n\n`;
+        downloadMessageText += `\nReply with the quality number to download the movie\n\n`;
         downloadMessageText += `*Powered by Pathum Rajapakshe*`;
 
         const downloadMessage = await conn.sendMessage(from, {
@@ -345,27 +358,65 @@ cmd({
 
           conn.ev.off("messages.upsert", qualitySelectionHandler);
 
+          // Show only "Uploading..." message
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Download Link", 
-              `The movie *${selectedFilm.title} (${selectedFilm.year})* is too large to send directly.\n\nPlease download it manually using this link:\n${selectedLink.url}\n\nQuality: ${selectedLink.quality}\nSize: ${selectedLink.size}`),
+            text: frozenTheme.box("Uploading", 
+              `Downloading *${selectedFilm.title} (${selectedFilm.year})* in ${selectedLink.quality}... Please wait.`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
 
           await conn.sendMessage(from, { 
             react: { 
-              text: frozenTheme.resultEmojis[Math.floor(Math.random() * frozenTheme.resultEmojis.length)], 
+              text: "⏳", 
               key: qualityMessage.key 
             }
           });
+
+          try {
+            const outputDir = path.join(__dirname, 'downloads');
+            if (!fs.existsSync(outputDir)) {
+              fs.mkdirSync(outputDir);
+            }
+
+            const fileName = `${selectedFilm.title.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedLink.quality}`;
+            const chunkFiles = await downloadAndSplitVideo(selectedLink.url, outputDir, fileName);
+
+            for (let i = 0; i < chunkFiles.length; i++) {
+              const chunkFile = chunkFiles[i];
+              await conn.sendMessage(from, {
+                video: { url: chunkFile },
+                caption: frozenTheme.box("Movie Part", 
+                  `Part ${i + 1} of *${selectedFilm.title} (${selectedFilm.year})*\nQuality: ${selectedLink.quality}\n\nDownload all parts to watch the full movie.`),
+                ...frozenTheme.getForwardProps()
+              }, { quoted: qualityMessage });
+
+              // Clean up chunk file
+              fs.unlinkSync(chunkFile);
+            }
+
+            await conn.sendMessage(from, { 
+              react: { 
+                text: frozenTheme.resultEmojis[Math.floor(Math.random() * frozenTheme.resultEmojis.length)], 
+                key: qualityMessage.key 
+              }
+            });
+          } catch (downloadError) {
+            console.error("Download/Split Error:", downloadError);
+            await conn.sendMessage(from, {
+              text: frozenTheme.box("Download Error", 
+                `Failed to process the download. Error: ${downloadError.message}`),
+              ...frozenTheme.getForwardProps()
+            }, { quoted: qualityMessage });
+          }
         };
 
         conn.ev.on("messages.upsert", qualitySelectionHandler);
 
       } catch (error) {
-        console.error("Download Error:", error.response?.status, error.message);
+        console.error("Download Error:", error.response?.status || 'No status', error.message);
         await conn.sendMessage(from, {
           text: frozenTheme.box("Download Error", 
-            `Failed to get download links: ${error.message}\n\nYou can try downloading manually from: ${selectedFilm.link}`),
+            `Failed to get download links: ${error.message}\n\nYou can try again later.`),
           ...frozenTheme.getForwardProps()
         }, { quoted: message });
       }
@@ -374,7 +425,7 @@ cmd({
     conn.ev.on("messages.upsert", filmSelectionHandler);
 
   } catch (error) {
-    console.error("Error in film command:", error.response?.status, error.message);
+    console.error("Error in film command:", error.response?.status || 'No status', error.message);
     const errorMsg = frozenTheme.box("Error", 
       `Sorry, an error occurred:\n\n${error.message || "Unknown error"}\n\nPlease try again later`);
     
