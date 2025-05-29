@@ -177,20 +177,22 @@ cmd({
     let searchData = searchCache.get(cacheKey);
 
     if (!searchData) {
-      let searchUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`;
+      let primarySearchUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`;
       let fallbackSearchUrl = `https://apicinex.vercel.app/api/sinhalasub/movie/search?q=${encodeURIComponent(q)}`;
       let retries = 3;
       let usingFallback = false;
 
       while (retries > 0) {
         try {
-          console.log(`Attempting to fetch from ${searchUrl}...`);
-          const searchResponse = await axios.get(searchUrl, { 
+          console.log(`Attempting to fetch from ${primarySearchUrl}...`);
+          const searchResponse = await axios.get(primarySearchUrl, { 
             timeout: 15000,
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+            headers: { 
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
           });
           searchData = searchResponse.data;
-          console.log(`API Response from ${searchUrl}:`, JSON.stringify(searchData, null, 2));
+          console.log(`API Response from ${primarySearchUrl}:`, JSON.stringify(searchData, null, 2));
 
           let results;
           if (Array.isArray(searchData)) {
@@ -207,7 +209,7 @@ cmd({
           searchCache.set(cacheKey, searchData);
           break;
         } catch (error) {
-          console.error(`Search API Error (${searchUrl}):`, error.response?.status || 'No status', error.message);
+          console.error(`Primary API Error (${primarySearchUrl}):`, error.response?.status || 'No status', error.message);
           retries--;
           if (retries === 0) {
             usingFallback = true;
@@ -215,7 +217,9 @@ cmd({
               console.log(`Falling back to ${fallbackSearchUrl}...`);
               const fallbackResponse = await axios.get(fallbackSearchUrl, { 
                 timeout: 15000,
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+                headers: { 
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
               });
               searchData = fallbackResponse.data;
               console.log(`Fallback API Response from ${fallbackSearchUrl}:`, JSON.stringify(searchData, null, 2));
@@ -295,11 +299,18 @@ cmd({
       conn.ev.off("messages.upsert", filmSelectionHandler);
 
       try {
-        let downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
+        let downloadUrl;
+        if (selectedFilm.link.includes('dark-yasiya-api.site')) {
+          downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
+        } else {
+          downloadUrl = `https://apicinex.vercel.app/api/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
+        }
         console.log(`Fetching download links from ${downloadUrl}...`);
         const downloadResponse = await axios.get(downloadUrl, { 
           timeout: 15000,
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+          headers: { 
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
         });
         let downloadData = downloadResponse.data;
 
@@ -401,7 +412,7 @@ cmd({
               }
             });
           } catch (downloadError) {
-            console.error("Download/Split Error:", downloadError);
+            console.error("Download/Split Error:", downloadError.message);
             await conn.sendMessage(from, {
               text: frozenTheme.box("Download Error", 
                 `Failed to process the download. Error: ${downloadError.message}`),
@@ -416,7 +427,7 @@ cmd({
         console.error("Download Error:", error.response?.status || 'No status', error.message);
         await conn.sendMessage(from, {
           text: frozenTheme.box("Download Error", 
-            `Failed to get download links: ${error.message}\n\nYou can try again later.`),
+            `Failed to get download links: ${error.message}\n\nPlease try again later.`),
           ...frozenTheme.getForwardProps()
         }, { quoted: message });
       }
