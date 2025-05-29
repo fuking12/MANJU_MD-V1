@@ -295,7 +295,7 @@ cmd({
         return;
       }
 
-      console.log("Selected Film:", selectedFilm);
+      console.log("Selected Film:", JSON.stringify(selectedFilm, null, 2));
 
       conn.ev.off("messages.upsert", filmSelectionHandler);
 
@@ -304,10 +304,9 @@ cmd({
         if (selectedFilm.source === 'dark-yasiya' || selectedFilm.link.includes('dark-yasiya-api.site')) {
           downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
         } else {
-          downloadUrl = `https://apicinex.vercel.app/api/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
+          downloadUrl = `https://apicinex.vercel.app/api/sinhalasub/download?url=${encodeURIComponent(selectedFilm.link)}`; // Adjusted endpoint
         }
-
-        console.log(`Fetching download links from ${downloadUrl}...`);
+        console.log(`Fetching download links from ${downloadUrl} with link: ${selectedFilm.link}...`);
         const downloadResponse = await axios.get(downloadUrl, { 
           timeout: 15000,
           headers: { 
@@ -429,7 +428,7 @@ cmd({
         console.error("Download Error:", error.response?.status || 'No status', error.message);
         let errorMessage = "Failed to get download links: " + error.message;
         if (error.response?.status === 404) {
-          errorMessage = `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server.\nPlease try a different movie.`;
+          errorMessage = `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server.\nPlease try a different movie or check the link: ${selectedFilm.link}`;
         }
         await conn.sendMessage(from, {
           text: frozenTheme.box("Download Error", errorMessage),
