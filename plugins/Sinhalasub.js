@@ -258,7 +258,8 @@ cmd({
       imdb: film.imdb || film.rating || "N/A",
       year: film.year || "Unknown",
       link: film.url || film.link || "",
-      image: film.image || film.imageSrc || "https://i.ibb.co/5Yb4VZy/snowflake.jpg"
+      image: film.image || film.imageSrc || "https://i.ibb.co/5Yb4VZy/snowflake.jpg",
+      source: film.source || (film.url?.includes('dark-yasiya-api.site') ? 'dark-yasiya' : 'apicinex')
     }));
 
     films.forEach(film => {
@@ -300,11 +301,12 @@ cmd({
 
       try {
         let downloadUrl;
-        if (selectedFilm.link.includes('dark-yasiya-api.site')) {
+        if (selectedFilm.source === 'dark-yasiya' || selectedFilm.link.includes('dark-yasiya-api.site')) {
           downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
         } else {
           downloadUrl = `https://apicinex.vercel.app/api/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
         }
+
         console.log(`Fetching download links from ${downloadUrl}...`);
         const downloadResponse = await axios.get(downloadUrl, { 
           timeout: 15000,
@@ -425,9 +427,12 @@ cmd({
 
       } catch (error) {
         console.error("Download Error:", error.response?.status || 'No status', error.message);
+        let errorMessage = "Failed to get download links: " + error.message;
+        if (error.response?.status === 404) {
+          errorMessage = `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server.\nPlease try a different movie.`;
+        }
         await conn.sendMessage(from, {
-          text: frozenTheme.box("Download Error", 
-            `Failed to get download links: ${error.message}\n\nPlease try again later.`),
+          text: frozenTheme.box("Download Error", errorMessage),
           ...frozenTheme.getForwardProps()
         }, { quoted: message });
       }
