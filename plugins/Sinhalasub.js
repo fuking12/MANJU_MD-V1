@@ -43,10 +43,16 @@ const extractLinks = (data) => {
     if (data.error || data.message) {
       throw new Error(`API Error: ${data.error || data.message}`);
     }
-    // Adjusted for dark-yasiya-api.site response structure
+    // Adjusted for potential dark-yasiya-api.site response structures
     links = data.links || data.downloadLinks || data.data || data.urls || data.download || [];
-    if (data.result && data.result.data && Array.isArray(data.result.data.links)) {
-      links = data.result.data.links; // Adjusted based on common API response
+    if (data.result) {
+      if (Array.isArray(data.result)) {
+        links = data.result;
+      } else if (data.result.links) {
+        links = data.result.links;
+      } else if (data.result.data) {
+        links = data.result.data.links || data.result.data.downloadLinks || data.result.data.dl_links || [];
+      }
     }
     if (!Array.isArray(links)) {
       for (let key in data) {
@@ -61,13 +67,20 @@ const extractLinks = (data) => {
     }
   }
 
-  return links.filter(link => 
+  // Filter and map links
+  const filteredLinks = links.filter(link => 
     link && (link.url || link.link || link.download || link.direct_download || link.href || link.download_url)
   ).map(link => ({
     quality: link.quality || "Unknown Quality",
     size: link.size || "Unknown",
     url: link.url || link.link || link.download || link.direct_download || link.href || link.download_url
   }));
+
+  if (filteredLinks.length === 0) {
+    throw new Error("No valid download links found in the API response");
+  }
+
+  return filteredLinks;
 };
 
 // Function to download and split the video with improved validation
@@ -191,7 +204,7 @@ cmd({
             }
           });
           searchData = searchResponse.data;
-          console.log(`API Response from ${searchUrl}:`, JSON.stringify(searchData, null, 2));
+          console.log(`Search API Response from ${searchUrl}:`, JSON.stringify(searchData, null, 2));
 
           let results;
           if (Array.isArray(searchData)) {
@@ -282,9 +295,6 @@ cmd({
         console.log(`Download API Response from ${downloadUrl}:`, JSON.stringify(downloadData, null, 2));
 
         const links = extractLinks(downloadData);
-        if (!downloadData || typeof downloadData !== 'object' || !Array.isArray(links) || links.length === 0) {
-          throw new Error("No download links available. Response: " + JSON.stringify(downloadData));
-        }
 
         const downloadLinks = links.map((link, index) => ({
           number: index + 1,
