@@ -1,4 +1,4 @@
-const { cmd } = require("../command"); 
+1const { cmd } = require("../command"); 
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const ffmpeg = require('fluent-ffmpeg');
@@ -9,9 +9,7 @@ const https = require('https');
 // Cache initialization with 1 minute TTL
 const searchCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
 
-// ======================
 // PATHUM RAJAPAKSHE THEME
-// ======================
 const frozenTheme = {
   header: `🎬 PATHUM RAJAPAKSHE MOVIE HUB 🎬\n✨ Powered by Manju_MD ✨\n`,
   box: function(title, content) {
@@ -45,13 +43,10 @@ const extractLinks = (data) => {
     if (data.error || data.message) {
       throw new Error(`API Error: ${data.error || data.message}`);
     }
-
     links = data.links || data.downloadLinks || data.data || data.urls || data.download || [];
-
     if (data.result && data.result.data && Array.isArray(data.result.data.dl_links)) {
       links = data.result.data.dl_links;
     }
-    
     if (!Array.isArray(links)) {
       for (let key in data) {
         if (Array.isArray(data[key])) {
@@ -82,8 +77,6 @@ const downloadAndSplitVideo = async (url, outputDir, fileName) => {
   while (retryCount < maxRetries) {
     try {
       const videoPath = path.join(outputDir, `${fileName}.mp4`);
-      
-      // Download the video using https module
       await new Promise((resolve, reject) => {
         const file = fs.createWriteStream(videoPath);
         https.get(url, (response) => {
@@ -92,7 +85,6 @@ const downloadAndSplitVideo = async (url, outputDir, fileName) => {
             fs.unlinkSync(videoPath);
             return reject(new Error(`Failed to download: Status Code ${response.statusCode}`));
           }
-
           response.pipe(file);
           file.on('finish', () => {
             file.close();
@@ -103,48 +95,39 @@ const downloadAndSplitVideo = async (url, outputDir, fileName) => {
           fs.unlinkSync(videoPath);
           reject(new Error(`Download error: ${err.message}`));
         });
-
-        setTimeout(() => {
-          reject(new Error('Download timeout'));
-        }, 60000); // 60 seconds timeout
+        setTimeout(() => reject(new Error('Download timeout')), 60000);
       });
 
       console.log(`Downloaded video to ${videoPath}`);
-
-      // Validate file size
       const stats = fs.statSync(videoPath);
-      const fileSize = stats.size;
-      if (fileSize < 1024 * 1024) { // Less than 1 MB is suspicious
+      if (stats.size < 1024 * 1024) {
         fs.unlinkSync(videoPath);
         throw new Error('Downloaded file is too small, likely invalid');
       }
 
-      // Validate the file with ffprobe
       await new Promise((resolve, reject) => {
         ffmpeg.ffprobe(videoPath, (err, metadata) => {
           if (err) {
-            fs.unlinkSync(videoPath); // Remove invalid file
+            fs.unlinkSync(videoPath);
             return reject(new Error(`ffprobe error: ${err.message}`));
           }
           if (!metadata || !metadata.format || !metadata.format.duration) {
-            fs.unlinkSync(videoPath); // Remove invalid file
+            fs.unlinkSync(videoPath);
             return reject(new Error('Invalid video file: No duration metadata'));
           }
           resolve();
         });
       });
 
-      // Split the video into 64 MB chunks
-      const chunkSize = 64 * 1024 * 1024; // 64 MB in bytes
+      const chunkSize = 64 * 1024 * 1024;
       const duration = await new Promise((resolve, reject) => {
         ffmpeg.ffprobe(videoPath, (err, metadata) => {
           if (err) return reject(err);
           resolve(metadata.format.duration);
         });
       });
-
-      const chunkDuration = (chunkSize / fileSize) * duration;
-      const chunks = Math.ceil(fileSize / chunkSize);
+      const chunkDuration = (chunkSize / stats.size) * duration;
+      const chunks = Math.ceil(stats.size / chunkSize);
       const chunkFiles = [];
 
       for (let i = 0; i < chunks; i++) {
@@ -164,15 +147,13 @@ const downloadAndSplitVideo = async (url, outputDir, fileName) => {
         });
       }
 
-      // Clean up original file
       fs.unlinkSync(videoPath);
-
       return chunkFiles;
     } catch (error) {
       console.error(`Download/Split Error (Attempt ${retryCount + 1}):`, error.message);
       retryCount++;
       if (retryCount === maxRetries) throw error;
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }
 };
@@ -191,7 +172,6 @@ cmd({
   }
 
   try {
-    // Step 1: Check cache for movie info
     const cacheKey = `film_search_${q.toLowerCase()}`;
     let searchData = searchCache.get(cacheKey);
 
@@ -205,8 +185,7 @@ cmd({
         try {
           const searchResponse = await axios.get(searchUrl, { timeout: 15000 });
           searchData = searchResponse.data;
-
-          console.log("Primary API Response:", JSON.stringify(searchData));
+          console.log(`API Response from ${searchUrl}:`, JSON.stringify(searchData, null, 2));
 
           let results;
           if (Array.isArray(searchData)) {
@@ -216,21 +195,21 @@ cmd({
           }
 
           if (!searchData || typeof searchData !== 'object' || !Array.isArray(results) || results.length === 0) {
-            throw new Error("No movies found in sinhalasub site or invalid response structure. Response: " + JSON.stringify(searchData));
+            throw new Error("No movies found or invalid response structure");
           }
 
           searchData = { results };
           searchCache.set(cacheKey, searchData);
           break;
         } catch (error) {
+          console.error(`Search API Error (${searchUrl}):`, error.response?.status, error.message);
           retries--;
           if (retries === 0) {
             usingFallback = true;
             try {
               const fallbackResponse = await axios.get(fallbackSearchUrl, { timeout: 15000 });
               searchData = fallbackResponse.data;
-
-              console.log("Fallback API Response:", JSON.stringify(searchData));
+              console.log(`Fallback API Response from ${fallbackSearchUrl}:`, JSON.stringify(searchData, null, 2));
 
               let results;
               if (Array.isArray(searchData)) {
@@ -240,14 +219,14 @@ cmd({
               }
 
               if (!searchData || typeof searchData !== 'object' || !Array.isArray(results) || results.length === 0) {
-                throw new Error("No movies found in fallback API or invalid response structure. Response: " + JSON.stringify(searchData));
+                throw new Error("No movies found in fallback API or invalid response structure");
               }
 
               searchData = { results };
               searchCache.set(cacheKey, searchData);
               break;
             } catch (fallbackError) {
-              console.error("Fallback API Error:", fallbackError.message);
+              console.error(`Fallback API Error (${fallbackSearchUrl}):`, fallbackError.response?.status, fallbackError.message);
               throw new Error("Failed to obtain information from the Film Treasury: " + (fallbackError.message || "Unknown error"));
             }
           }
@@ -256,7 +235,6 @@ cmd({
       }
     }
 
-    // Step 2: Format movie list
     let filmList = `🎬 SinhalaSub Movie Results 🎬\n\n`;
     filmList += `🔍 Search: ${q}\n\n`;
     filmList += `📝 Reply with the number of the movie you want:\n\n`;
@@ -276,13 +254,11 @@ cmd({
 
     filmList += `\n*Powered by Pathum Rajapakshe Movie Hub*`;
 
-    // Step 3: Send movie list
     const sentMessage = await conn.sendMessage(from, {
       text: filmList,
       ...frozenTheme.getForwardProps()
     }, { quoted: m });
 
-    // Step 4: Wait for movie selection
     const filmSelectionHandler = async (update) => {
       const message = update.messages[0];
       if (!message?.message?.conversation && !message?.message?.extendedTextMessage) return;
@@ -309,13 +285,12 @@ cmd({
 
       conn.ev.off("messages.upsert", filmSelectionHandler);
 
-      // Step 5: Get download links from API
       try {
         let downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
         const downloadResponse = await axios.get(downloadUrl, { timeout: 15000 });
         let downloadData = downloadResponse.data;
 
-        console.log("Download API Response:", JSON.stringify(downloadData));
+        console.log(`Download API Response from ${downloadUrl}:`, JSON.stringify(downloadData, null, 2));
 
         const links = extractLinks(downloadData);
         if (!downloadData || typeof downloadData !== 'object' || !Array.isArray(links) || links.length === 0) {
@@ -329,9 +304,6 @@ cmd({
           url: link.url
         }));
 
-        console.log("Download Links:", JSON.stringify(downloadLinks));
-
-        // Step 6: Send quality options
         const thumbnailUrl = downloadData.result?.data?.image || selectedFilm.image || "https://i.ibb.co/5Yb4VZy/snowflake.jpg";
 
         let downloadMessageText = `The movie *${selectedFilm.title} (${selectedFilm.year})* is ready to download.\n\n`;
@@ -341,7 +313,7 @@ cmd({
           downloadMessageText += `${link.number}. ${link.quality} (${link.size})\n`;
         });
 
-        downloadMessageText += `\nReply with the quality number to download the movie\n\n`;
+        downloadMessageText += `\nReply with the quality number to get the download link\n\n`;
         downloadMessageText += `*Powered by Pathum Rajapakshe*`;
 
         const downloadMessage = await conn.sendMessage(from, {
@@ -350,7 +322,6 @@ cmd({
           ...frozenTheme.getForwardProps()
         }, { quoted: message });
 
-        // Step 7: Handle quality selection and download
         const qualitySelectionHandler = async (updateQuality) => {
           const qualityMessage = updateQuality.messages[0];
           if (!qualityMessage?.message?.conversation && !qualityMessage?.message?.extendedTextMessage) return;
@@ -363,9 +334,6 @@ cmd({
           const selectedQualityNumber = parseInt(qualityReply);
           const selectedLink = downloadLinks.find(link => link.number === selectedQualityNumber);
 
-          console.log("Selected Quality Number:", selectedQualityNumber);
-          console.log("Download Links:", JSON.stringify(downloadLinks));
-
           if (!selectedLink || selectedQualityNumber > downloadLinks.length) {
             await conn.sendMessage(from, {
               text: frozenTheme.box("Invalid Quality", 
@@ -377,62 +345,24 @@ cmd({
 
           conn.ev.off("messages.upsert", qualitySelectionHandler);
 
-          // Send "Uploading" message with react
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Uploading", 
-              `Downloading *${selectedFilm.title} (${selectedFilm.year})* in ${selectedLink.quality}... Please wait.`),
+            text: frozenTheme.box("Download Link", 
+              `The movie *${selectedFilm.title} (${selectedFilm.year})* is too large to send directly.\n\nPlease download it manually using this link:\n${selectedLink.url}\n\nQuality: ${selectedLink.quality}\nSize: ${selectedLink.size}`),
             ...frozenTheme.getForwardProps()
           }, { quoted: qualityMessage });
 
           await conn.sendMessage(from, { 
             react: { 
-              text: "⏳", 
+              text: frozenTheme.resultEmojis[Math.floor(Math.random() * frozenTheme.resultEmojis.length)], 
               key: qualityMessage.key 
             }
           });
-
-          try {
-            const outputDir = path.join(__dirname, 'downloads');
-            if (!fs.existsSync(outputDir)) {
-              fs.mkdirSync(outputDir);
-            }
-
-            const fileName = `${selectedFilm.title.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedLink.quality}`;
-            const chunkFiles = await downloadAndSplitVideo(selectedLink.url, outputDir, fileName);
-
-            for (let i = 0; i < chunkFiles.length; i++) {
-              const chunkFile = chunkFiles[i];
-              await conn.sendMessage(from, {
-                video: { url: chunkFile },
-                caption: frozenTheme.box("Movie Part", 
-                  `Part ${i + 1} of *${selectedFilm.title} (${selectedFilm.year})*\nQuality: ${selectedLink.quality}\n\nDownload all parts to watch the full movie.`),
-                ...frozenTheme.getForwardProps()
-              }, { quoted: qualityMessage });
-
-              // Clean up chunk file
-              fs.unlinkSync(chunkFile);
-            }
-
-            await conn.sendMessage(from, { 
-              react: { 
-                text: frozenTheme.resultEmojis[Math.floor(Math.random() * frozenTheme.resultEmojis.length)], 
-                key: qualityMessage.key 
-              }
-            });
-          } catch (downloadError) {
-            console.error("Download/Split Error:", downloadError);
-            await conn.sendMessage(from, {
-              text: frozenTheme.box("Download Error", 
-                `Failed to process the download. Error: ${downloadError.message}\n\nPlease try the link manually:\n${selectedLink.url}`),
-              ...frozenTheme.getForwardProps()
-            }, { quoted: qualityMessage });
-          }
         };
 
         conn.ev.on("messages.upsert", qualitySelectionHandler);
 
       } catch (error) {
-        console.error("Download Error:", error);
+        console.error("Download Error:", error.response?.status, error.message);
         await conn.sendMessage(from, {
           text: frozenTheme.box("Download Error", 
             `Failed to get download links: ${error.message}\n\nYou can try downloading manually from: ${selectedFilm.link}`),
@@ -444,7 +374,7 @@ cmd({
     conn.ev.on("messages.upsert", filmSelectionHandler);
 
   } catch (error) {
-    console.error("Error in film command:", error);
+    console.error("Error in film command:", error.response?.status, error.message);
     const errorMsg = frozenTheme.box("Error", 
       `Sorry, an error occurred:\n\n${error.message || "Unknown error"}\n\nPlease try again later`);
     
