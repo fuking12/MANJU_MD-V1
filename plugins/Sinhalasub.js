@@ -43,7 +43,6 @@ const extractLinks = (data) => {
     if (data.error || data.message) {
       throw new Error(`API Error: ${data.error || data.message}`);
     }
-    // Adjusted for potential dark-yasiya-api.site response structures
     links = data.links || data.downloadLinks || data.data || data.urls || data.download || [];
     if (data.result) {
       if (Array.isArray(data.result)) {
@@ -67,7 +66,6 @@ const extractLinks = (data) => {
     }
   }
 
-  // Filter and map links
   const filteredLinks = links.filter(link => 
     link && (link.url || link.link || link.download || link.direct_download || link.href || link.download_url)
   ).map(link => ({
@@ -81,6 +79,56 @@ const extractLinks = (data) => {
   }
 
   return filteredLinks;
+};
+
+// Function to extract movies from search API response
+const extractMovies = (data, query) => {
+  let movies = [];
+
+  console.log(`Raw API Response:`, JSON.stringify(data, null, 2));
+
+  // Handle direct array of movies (based on console log structure)
+  if (Array.isArray(data)) {
+    movies = data.filter(item => item && item.title && (item.link || item.url));
+  } else if (typeof data === 'object' && data !== null) {
+    if (data.error || data.message) {
+      throw new Error(`API Error: ${data.error || data.message}`);
+    }
+    // Check for common nested structures
+    if (data.results && Array.isArray(data.results)) {
+      movies = data.results.filter(item => item && item.title && (item.link || item.url));
+    } else if (data.data && Array.isArray(data.data)) {
+      movies = data.data.filter(item => item && item.title && (item.link || item.url));
+    } else if (data.movies && Array.isArray(data.movies)) {
+      movies = data.movies.filter(item => item && item.title && (item.link || item.url));
+    } else if (data.result) {
+      if (Array.isArray(data.result)) {
+        movies = data.result.filter(item => item && item.title && (item.link || item.url));
+      } else if (data.result.data && Array.isArray(data.result.data)) {
+        movies = data.result.data.filter(item => item && item.title && (item.link || item.url));
+      }
+    } else {
+      // Fallback: Check if any key contains an array of movies
+      for (let key in data) {
+        if (Array.isArray(data[key])) {
+          movies = data[key].filter(item => item && item.title && (item.link || item.url));
+          break;
+        }
+      }
+    }
+  }
+
+  console.log(`Extracted Movies (before matching):`, JSON.stringify(movies, null, 2));
+
+  // Case-insensitive partial matching
+  query = query.toLowerCase();
+  const matchedMovies = movies.filter(movie => 
+    movie.title && movie.title.toLowerCase().includes(query)
+  );
+
+  console.log(`Matched Movies:`, JSON.stringify(matchedMovies, null, 2));
+
+  return { matched: matchedMovies, all: movies };
 };
 
 // Function to download and split the video with improved validation
@@ -183,7 +231,7 @@ cmd({
 }, async (conn, mek, m, { from, q, pushname, reply }) => {
   if (!q) {
     return reply(frozenTheme.box("Sinhala Sub Movie", 
-      "Use: .film <film name>\n✨ Ex: .film Deadpool\nPathum's SinhalaSub Movie List"));
+      "Use: .film <film name>\n✨ Ex: .film Jailer\nPathum's SinhalaSub Movie List"));
   }
 
   try {
@@ -193,11 +241,12 @@ cmd({
     if (!searchData) {
       const searchUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`;
       let retries = 3;
+      let searchResponse;
 
       while (retries > 0) {
         try {
           console.log(`Attempting to fetch from ${searchUrl}...`);
-          const searchResponse = await axios.get(searchUrl, { 
+          searchResponse = await axios.get(searchUrl, { 
             timeout: 15000,
             headers: { 
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -205,221 +254,222 @@ cmd({
           });
           searchData = searchResponse.data;
           console.log(`Search API Response from ${searchUrl}:`, JSON.stringify(searchData, null, 2));
-
-          let results;
-          if (Array.isArray(searchData)) {
-            results = searchData;
-          } else {
-            results = searchData.results || searchData.data || searchData.movies || [];
-          }
-
-          if (!searchData || typeof searchData !== 'object' || !Array.isArray(results) || results.length === 0) {
-            throw new Error("No movies found or invalid response structure");
-          }
-
-          searchData = { results };
-          searchCache.set(cacheKey, searchData);
           break;
         } catch (error) {
           console.error(`Search API Error (${searchUrl}):`, error.response?.status || 'No status', error.message);
           retries--;
           if (retries === 0) {
-            throw new Error("Failed to obtain information from the Film Treasury: " + (error.message || "Unknown error"));
+            throw new Error("Failed to fetch movie data: " + (error.message || "Unknown error"));
           }
           await new Promise(resolve => setTimeout(resolve, 1500));
         }
       }
-    }
 
-    let filmList = `🎬 SinhalaSub Movie Results 🎬\n\n`;
-    filmList += `🔍 Search: ${q}\n\n`;
-    filmList += `📝 Reply with the number of the movie you want:\n\n`;
+      const { matched, all } = extractMovies(searchData, q);
 
-    const films = searchData.results.slice(0, 10).map((film, index) => ({
-      number: index + 1,
-      title: film.title || "Unknown Title",
-      imdb: film.imdb || film.rating || "N/A",
-      year: film.year || "Unknown",
-      link: film.url || film.link || "",
-      image: film.image || film.imageSrc || "https://i.ibb.co/5Yb4VZy/snowflake.jpg",
-    }));
-
-    films.forEach(film => {
-      filmList += `${film.number}. ${film.title} (${film.year})\n`;
-    });
-
-    filmList += `\n*Powered by Pathum Rajapakshe Movie Hub*`;
-
-    const sentMessage = await conn.sendMessage(from, {
-      text: filmList,
-      ...frozenTheme.getForwardProps()
-    }, { quoted: m });
-
-    const filmSelectionHandler = async (update) => {
-      const message = update.messages[0];
-      if (!message?.message?.conversation && !message?.message?.extendedTextMessage) return;
-
-      const userReply = message.message.conversation || message.message.extendedTextMessage?.text?.trim();
-      if (!userReply) return;
-
-      if (message.message.extendedTextMessage?.contextInfo?.stanzaId !== sentMessage.key.id) return;
-
-      const selectedNumber = parseInt(userReply);
-      const largestNumber = films.length;
-      const selectedFilm = films.find(film => film.number === selectedNumber);
-
-      if (!selectedFilm || isNaN(selectedNumber) || selectedNumber > largestNumber) {
-        await conn.sendMessage(from, {
-          text: frozenTheme.box("Invalid number", 
-            "Please select a valid number from the list"),
-          ...frozenTheme.getForwardProps()
-        }, { quoted: message });
+      if (all.length === 0) {
+        await reply(frozenTheme.box("No Movies Available", 
+          `No movies found in the database.\nPlease try again later.`));
         return;
       }
 
-      console.log("Selected Film:", JSON.stringify(selectedFilm, null, 2));
+      // If no exact match, show all available movies
+      const moviesToShow = matched.length > 0 ? matched : all;
+      const header = matched.length > 0 ? "SinhalaSub Movie Results" : "Available Movies";
 
-      conn.ev.off("messages.upsert", filmSelectionHandler);
+      searchData = { results: moviesToShow };
+      searchCache.set(cacheKey, searchData);
+      
+      let filmList = `🎬 ${header} 🎬\n\n`;
+      filmList += matched.length > 0 ? `🔍 Search: ${q}\n\n` : `🔍 No match for: ${q}\n\n`;
+      filmList += `📝 Reply with the number of the movie you want:\n\n`;
 
-      try {
-        const downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
-        console.log(`Fetching download links from ${downloadUrl} with link: ${selectedFilm.link}...`);
-        const downloadResponse = await axios.get(downloadUrl, { 
-          timeout: 15000,
-          headers: { 
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-          }
-        });
-        let downloadData = downloadResponse.data;
+      const films = searchData.results.slice(0, 10).map((film, index) => ({
+        number: index + 1,
+        title: film.title || "Unknown Title",
+        imdb: film.imdb || film.rating || "N/A",
+        year: film.year || "Unknown",
+        link: film.link || film.url || "",
+        image: film.image || "https://i.ibb.co/5Yb4VZy/snowflake.jpg",
+      }));
 
-        console.log(`Download API Response from ${downloadUrl}:`, JSON.stringify(downloadData, null, 2));
+      films.forEach(film => {
+        filmList += `${film.number}. ${film.title} (${film.year})\n`;
+      });
 
-        const links = extractLinks(downloadData);
+      filmList += `\n*Powered by Pathum Rajapakshe Movie Hub*`;
 
-        const downloadLinks = links.map((link, index) => ({
-          number: index + 1,
-          quality: link.quality || "Unknown Quality",
-          size: link.size || "Unknown",
-          url: link.url
-        }));
+      const sentMessage = await conn.sendMessage(from, {
+        text: filmList,
+        ...frozenTheme.getForwardProps()
+      }, { quoted: m });
 
-        const thumbnailUrl = downloadData.result?.data?.image || selectedFilm.image || "https://i.ibb.co/5Yb4VZy/snowflake.jpg";
+      const filmSelectionHandler = async (update) => {
+        const message = update.messages[0];
+        if (!message?.message?.conversation && !message?.message?.extendedTextMessage) return;
 
-        let downloadMessageText = `The movie *${selectedFilm.title} (${selectedFilm.year})* is ready to download.\n\n`;
-        downloadMessageText += `📌 Select Quality:\n\n`;
+        const userReply = message.message.conversation || message.message.extendedTextMessage?.text?.trim();
+        if (!userReply) return;
 
-        downloadLinks.forEach(link => {
-          downloadMessageText += `${link.number}. ${link.quality} (${link.size})\n`;
-        });
+        if (message.message.extendedTextMessage?.contextInfo?.stanzaId !== sentMessage.key.id) return;
 
-        downloadMessageText += `\nReply with the quality number to download the movie\n\n`;
-        downloadMessageText += `*Powered by Pathum Rajapakshe*`;
+        const selectedNumber = parseInt(userReply);
+        const largestNumber = films.length;
+        const selectedFilm = films.find(film => film.number === selectedNumber);
 
-        const downloadMessage = await conn.sendMessage(from, {
-          image: { url: thumbnailUrl },
-          caption: frozenTheme.box("Download Instruction", downloadMessageText),
-          ...frozenTheme.getForwardProps()
-        }, { quoted: message });
-
-        const qualitySelectionHandler = async (updateQuality) => {
-          const qualityMessage = updateQuality.messages[0];
-          if (!qualityMessage?.message?.conversation && !qualityMessage?.message?.extendedTextMessage) return;
-
-          const qualityReply = qualityMessage.message.conversation || qualityMessage.message.extendedTextMessage?.text?.trim();
-          if (!qualityReply) return;
-
-          if (qualityMessage.message.extendedTextMessage?.contextInfo?.stanzaId !== downloadMessage.key.id) return;
-
-          const selectedQualityNumber = parseInt(qualityReply);
-          const selectedLink = downloadLinks.find(link => link.number === selectedQualityNumber);
-
-          if (!selectedLink || selectedQualityNumber > downloadLinks.length) {
-            await conn.sendMessage(from, {
-              text: frozenTheme.box("Invalid Quality", 
-                "Please select a valid quality number"),
-              ...frozenTheme.getForwardProps()
-            }, { quoted: qualityMessage });
-            return;
-          }
-
-          conn.ev.off("messages.upsert", qualitySelectionHandler);
-
-          // Show only "Uploading..." message
+        if (!selectedFilm || isNaN(selectedNumber) || selectedNumber > largestNumber) {
           await conn.sendMessage(from, {
-            text: frozenTheme.box("Uploading", 
-              `Downloading *${selectedFilm.title} (${selectedFilm.year})* in ${selectedLink.quality}... Please wait.`),
+            text: frozenTheme.box("Invalid number", 
+              "Please select a valid number from the list"),
             ...frozenTheme.getForwardProps()
-          }, { quoted: qualityMessage });
+          }, { quoted: message });
+          return;
+        }
 
-          await conn.sendMessage(from, { 
-            react: { 
-              text: "⏳", 
-              key: qualityMessage.key 
+        console.log("Selected Film:", JSON.stringify(selectedFilm, null, 2));
+
+        conn.ev.off("messages.upsert", filmSelectionHandler);
+
+        try {
+          const downloadUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedFilm.link)}`;
+          console.log(`Fetching download links from ${downloadUrl} with link: ${selectedFilm.link}...`);
+          const downloadResponse = await axios.get(downloadUrl, { 
+            timeout: 15000,
+            headers: { 
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
           });
+          let downloadData = downloadResponse.data;
 
-          try {
-            const outputDir = path.join(__dirname, 'downloads');
-            if (!fs.existsSync(outputDir)) {
-              fs.mkdirSync(outputDir);
-            }
+          console.log(`Download API Response from ${downloadUrl}:`, JSON.stringify(downloadData, null, 2));
 
-            const fileName = `${selectedFilm.title.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedLink.quality}`;
-            const chunkFiles = await downloadAndSplitVideo(selectedLink.url, outputDir, fileName);
+          const links = extractLinks(downloadData);
 
-            for (let i = 0; i < chunkFiles.length; i++) {
-              const chunkFile = chunkFiles[i];
+          const downloadLinks = links.map((link, index) => ({
+            number: index + 1,
+            quality: link.quality || "Unknown Quality",
+            size: link.size || "Unknown",
+            url: link.url
+          }));
+
+          const thumbnailUrl = downloadData.result?.data?.image || selectedFilm.image || "https://i.ibb.co/5Yb4VZy/snowflake.jpg";
+
+          let downloadMessageText = `The movie *${selectedFilm.title} (${selectedFilm.year})* is ready to download.\n\n`;
+          downloadMessageText += `📌 Select Quality:\n\n`;
+
+          downloadLinks.forEach(link => {
+            downloadMessageText += `${link.number}. ${link.quality} (${link.size})\n`;
+          });
+
+          downloadMessageText += `\nReply with the quality number to download the movie\n\n`;
+          downloadMessageText += `*Powered by Pathum Rajapakshe*`;
+
+          const downloadMessage = await conn.sendMessage(from, {
+            image: { url: thumbnailUrl },
+            caption: frozenTheme.box("Download Instruction", downloadMessageText),
+            ...frozenTheme.getForwardProps()
+          }, { quoted: message });
+
+          const qualitySelectionHandler = async (updateQuality) => {
+            const qualityMessage = updateQuality.messages[0];
+            if (!qualityMessage?.message?.conversation && !qualityMessage?.message?.extendedTextMessage) return;
+
+            const qualityReply = qualityMessage.message.conversation || qualityMessage.message.extendedTextMessage?.text?.trim();
+            if (!qualityReply) return;
+
+            if (qualityMessage.message.extendedTextMessage?.contextInfo?.stanzaId !== downloadMessage.key.id) return;
+
+            const selectedQualityNumber = parseInt(qualityReply);
+            const selectedLink = downloadLinks.find(link => link.number === selectedQualityNumber);
+
+            if (!selectedLink || selectedQualityNumber > downloadLinks.length) {
               await conn.sendMessage(from, {
-                video: { url: chunkFile },
-                caption: frozenTheme.box("Movie Part", 
-                  `Part ${i + 1} of *${selectedFilm.title} (${selectedFilm.year})*\nQuality: ${selectedLink.quality}\n\nDownload all parts to watch the full movie.`),
+                text: frozenTheme.box("Invalid Quality", 
+                  "Please select a valid quality number"),
                 ...frozenTheme.getForwardProps()
               }, { quoted: qualityMessage });
-
-              // Clean up chunk file
-              fs.unlinkSync(chunkFile);
+              return;
             }
+
+            conn.ev.off("messages.upsert", qualitySelectionHandler);
+
+            // Show only "Uploading..." message
+            await conn.sendMessage(from, {
+              text: frozenTheme.box("Uploading", 
+                `Downloading *${selectedFilm.title} (${selectedFilm.year})* in ${selectedLink.quality}... Please wait.`),
+              ...frozenTheme.getForwardProps()
+            }, { quoted: qualityMessage });
 
             await conn.sendMessage(from, { 
               react: { 
-                text: frozenTheme.resultEmojis[Math.floor(Math.random() * frozenTheme.resultEmojis.length)], 
+                text: "⏳", 
                 key: qualityMessage.key 
               }
             });
-          } catch (downloadError) {
-            console.error("Download/Split Error:", downloadError.message);
-            await conn.sendMessage(from, {
-              text: frozenTheme.box("Download Error", 
-                `Failed to process the download. Error: ${downloadError.message}`),
-              ...frozenTheme.getForwardProps()
-            }, { quoted: qualityMessage });
+
+            try {
+              const outputDir = path.join(__dirname, 'downloads');
+              if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir);
+              }
+
+              const fileName = `${selectedFilm.title.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedLink.quality}`;
+              const chunkFiles = await downloadAndSplitVideo(selectedLink.url, outputDir, fileName);
+
+              for (let i = 0; i < chunkFiles.length; i++) {
+                const chunkFile = chunkFiles[i];
+                await conn.sendMessage(from, {
+                  video: { url: chunkFile },
+                  caption: frozenTheme.box("Movie Part", 
+                    `Part ${i + 1} of *${selectedFilm.title} (${selectedFilm.year})*\nQuality: ${selectedLink.quality}\n\nDownload all parts to watch the full movie.`),
+                  ...frozenTheme.getForwardProps()
+                }, { quoted: qualityMessage });
+
+                // Clean up chunk file
+                fs.unlinkSync(chunkFile);
+              }
+
+              await conn.sendMessage(from, { 
+                react: { 
+                  text: frozenTheme.resultEmojis[Math.floor(Math.random() * frozenTheme.resultEmojis.length)], 
+                  key: qualityMessage.key 
+                }
+              });
+            } catch (downloadError) {
+              console.error("Download/Split Error:", downloadError.message);
+              await conn.sendMessage(from, {
+                text: frozenTheme.box("Download Error", 
+                  `Failed to process the download. Error: ${downloadError.message}`),
+                ...frozenTheme.getForwardProps()
+              }, { quoted: qualityMessage });
+            }
+          };
+
+          conn.ev.on("messages.upsert", qualitySelectionHandler);
+
+        } catch (error) {
+          console.error("Download Error:", error.response?.status || 'No status', error.message);
+          let errorMessage = "Failed to get download links: " + error.message;
+          if (error.response?.status === 403) {
+            errorMessage = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host or request IP whitelisting from the API provider.`;
+          } else if (error.response?.status === 404) {
+            errorMessage = `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server.\nPlease try a different movie or check the link: ${selectedFilm.link}`;
           }
-        };
-
-        conn.ev.on("messages.upsert", qualitySelectionHandler);
-
-      } catch (error) {
-        console.error("Download Error:", error.response?.status || 'No status', error.message);
-        let errorMessage = "Failed to get download links: " + error.message;
-        if (error.response?.status === 403) {
-          errorMessage = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host (e.g., katabump) or request IP whitelisting from the API provider.`;
-        } else if (error.response?.status === 404) {
-          errorMessage = `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server.\nPlease try a different movie or check the link: ${selectedFilm.link}`;
+          await conn.sendMessage(from, {
+            text: frozenTheme.box("Download Error", errorMessage),
+            ...frozenTheme.getForwardProps()
+          }, { quoted: message });
         }
-        await conn.sendMessage(from, {
-          text: frozenTheme.box("Download Error", errorMessage),
-          ...frozenTheme.getForwardProps()
-        }, { quoted: message });
-      }
-    };
+      };
 
-    conn.ev.on("messages.upsert", filmSelectionHandler);
+      conn.ev.on("messages.upsert", filmSelectionHandler);
+    }
 
   } catch (error) {
     console.error("Error in film command:", error.response?.status || 'No status', error.message);
     let errorMsg = `Sorry, an error occurred:\n\n${error.message || "Unknown error"}\n\nPlease try again later`;
     if (error.response?.status === 403) {
-      errorMsg = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host (e.g., katabump) or request IP whitelisting from the API provider.`;
+      errorMsg = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host or request IP whitelisting from the API provider.`;
     }
     await reply(frozenTheme.box("Error", errorMsg));
     await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
