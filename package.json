@@ -61,7 +61,8 @@
     "whatsapp-web.js": "^1.28.0",
     "@google/generative-ai": "^0.24.1",
     "whatsapp-web.js": "^1.28.0",
-    "https": "^1.0.0"
+    "https": "^1.0.0",
+    "https-proxy-agent": "^7.0.6"
     
     
 
