@@ -5,6 +5,7 @@ const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 // Cache initialization with 1 minute TTL
 const searchCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
@@ -32,6 +33,10 @@ const frozenTheme = {
   },
   resultEmojis: ["📽️", "🧊", "👑", "🎥", "🎬", "📽️", "🎞️", "❅", "✨", "✧"]
 };
+
+// Proxy configuration (use a free proxy or a paid service like Luminati, Smartproxy, etc.)
+const proxyUrl = 'http://username:password@proxy-host:port'; // Replace with actual proxy details
+const proxyAgent = new HttpsProxyAgent(proxyUrl);
 
 // Function to extract links from API response
 const extractLinks = (data) => {
@@ -244,6 +249,7 @@ cmd({
           console.log(`Attempting to fetch from ${searchUrl}...`);
           searchResponse = await axios.get(searchUrl, { 
             timeout: 15000,
+            httpsAgent: proxyAgent, // Use proxy for search API
             headers: { 
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
@@ -330,6 +336,7 @@ cmd({
           console.log(`Fetching download links from ${downloadUrl} with link: ${selectedFilm.link}...`);
           const downloadResponse = await axios.get(downloadUrl, { 
             timeout: 15000,
+            httpsAgent: proxyAgent, // Use proxy for download API
             headers: { 
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
@@ -444,7 +451,7 @@ cmd({
           console.error("Download Error:", error.response?.status || 'No status', error.message);
           let errorMessage = `Failed to get download links: ${error.message}\n\n`;
           if (error.response?.status === 403) {
-            errorMessage += `Access denied (403 Forbidden). This is likely due to an IP restriction. Please contact the API provider (dark-yasiya-api.site) with your current IP (find it using 'curl ifconfig.me' in terminal) to request whitelisting.`;
+            errorMessage += `Access denied (403 Forbidden). This is likely due to an IP restriction. Please contact the API provider (dark-yasiya-api.site) with your current IP (find it using 'curl ifconfig.me' in terminal) to request whitelisting. Alternatively, try deploying the bot on a different host or using a proxy service.`;
           } else if (error.response?.status === 404) {
             errorMessage += `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server. Please try a different movie or check the link: ${selectedFilm.link}`;
           } else {
@@ -464,7 +471,7 @@ cmd({
     console.error("Error in film command:", error.response?.status || 'No status', error.message);
     let errorMsg = `Sorry, an error occurred:\n\n${error.message || "Unknown error"}\n\nPlease try again later`;
     if (error.response?.status === 403) {
-      errorMsg = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host or request IP whitelisting from the API provider.`;
+      errorMsg = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host or request IP whitelisting from the API provider (dark-yasiya-api.site).`;
     }
     await reply(frozenTheme.box("Error", errorMsg));
     await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
