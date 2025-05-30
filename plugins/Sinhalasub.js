@@ -87,14 +87,12 @@ const extractMovies = (data, query) => {
 
   console.log(`Raw API Response:`, JSON.stringify(data, null, 2));
 
-  // Handle direct array of movies (based on console log structure)
   if (Array.isArray(data)) {
     movies = data.filter(item => item && item.title && (item.link || item.url));
   } else if (typeof data === 'object' && data !== null) {
     if (data.error || data.message) {
       throw new Error(`API Error: ${data.error || data.message}`);
     }
-    // Check for common nested structures
     if (data.results && Array.isArray(data.results)) {
       movies = data.results.filter(item => item && item.title && (item.link || item.url));
     } else if (data.data && Array.isArray(data.data)) {
@@ -108,7 +106,6 @@ const extractMovies = (data, query) => {
         movies = data.result.data.filter(item => item && item.title && (item.link || item.url));
       }
     } else {
-      // Fallback: Check if any key contains an array of movies
       for (let key in data) {
         if (Array.isArray(data[key])) {
           movies = data[key].filter(item => item && item.title && (item.link || item.url));
@@ -120,7 +117,6 @@ const extractMovies = (data, query) => {
 
   console.log(`Extracted Movies (before matching):`, JSON.stringify(movies, null, 2));
 
-  // Case-insensitive partial matching
   query = query.toLowerCase();
   const matchedMovies = movies.filter(movie => 
     movie.title && movie.title.toLowerCase().includes(query)
@@ -273,7 +269,6 @@ cmd({
         return;
       }
 
-      // If no exact match, show all available movies
       const moviesToShow = matched.length > 0 ? matched : all;
       const header = matched.length > 0 ? "SinhalaSub Movie Results" : "Available Movies";
 
@@ -393,7 +388,6 @@ cmd({
 
             conn.ev.off("messages.upsert", qualitySelectionHandler);
 
-            // Show only "Uploading..." message
             await conn.sendMessage(from, {
               text: frozenTheme.box("Uploading", 
                 `Downloading *${selectedFilm.title} (${selectedFilm.year})* in ${selectedLink.quality}... Please wait.`),
@@ -425,7 +419,6 @@ cmd({
                   ...frozenTheme.getForwardProps()
                 }, { quoted: qualityMessage });
 
-                // Clean up chunk file
                 fs.unlinkSync(chunkFile);
               }
 
@@ -449,11 +442,13 @@ cmd({
 
         } catch (error) {
           console.error("Download Error:", error.response?.status || 'No status', error.message);
-          let errorMessage = "Failed to get download links: " + error.message;
+          let errorMessage = `Failed to get download links: ${error.message}\n\n`;
           if (error.response?.status === 403) {
-            errorMessage = `Access denied (403 Forbidden). This might be due to an IP restriction. Please try running the bot on a different host or request IP whitelisting from the API provider.`;
+            errorMessage += `Access denied (403 Forbidden). This is likely due to an IP restriction. Please contact the API provider (dark-yasiya-api.site) with your current IP (find it using 'curl ifconfig.me' in terminal) to request whitelisting.`;
           } else if (error.response?.status === 404) {
-            errorMessage = `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server.\nPlease try a different movie or check the link: ${selectedFilm.link}`;
+            errorMessage += `The movie *${selectedFilm.title} (${selectedFilm.year})* is no longer available on the server. Please try a different movie or check the link: ${selectedFilm.link}`;
+          } else {
+            errorMessage += `Please try again later or contact support.`;
           }
           await conn.sendMessage(from, {
             text: frozenTheme.box("Download Error", errorMessage),
