@@ -132,7 +132,7 @@ cmd(
       isBotAdmins,
       isAdmins,
       reply,
-    } ok p
+      ok,
   ) => {
     try {
       /*let x = await getxxxp(sender);
