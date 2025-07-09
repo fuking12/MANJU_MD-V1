@@ -5,7 +5,7 @@ const axios = require("axios")
 const{getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson} = require('../lib/functions')
 
 cmd({
-  pattern: 'sinhalasub',
+  pattern: 'sinhalasub1',
   react: '🔎',
   category: 'sinhalasub.lk movie search',
   alias: ['sinhalasub'],
