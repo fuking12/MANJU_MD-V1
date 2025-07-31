@@ -71,45 +71,47 @@ async (conn, mek, m, {
             buttons: [
                 {
                     buttonId: 'menu_action',
-                    buttonText: { displayText: `${dtzTheme.resultEmojis[8]} Select Menu` },
+                    buttonText: { displayText: `${dtzTheme.resultEmojis[8]} SELECT MENU🔘` },
                     type: 4,
                     nativeFlowInfo: {
                         name: 'single_select',
                         paramsJson: JSON.stringify({
-                            title: `${dtzTheme.resultEmojis[0]} DTZ PastPaper Menu`,
+                            title: `${dtzTheme.resultEmojis[0]} DTZ DOWNLOAD MENU📩`,
                             sections: [
                                 {
-                                    title: `${dtzTheme.resultEmojis[7]} Premium Features`,
+                                    title: `${dtzTheme.resultEmojis[7]} PREMIUM FUTURE`,
                                     rows: [
                                         {
-                                            title: `${dtzTheme.resultEmojis[3]} All Commands`,
+                                            title: `${dtzTheme.resultEmojis[3]} All COMMANDS`,
                                             description: 'View Complete Command Collection',
-                                            id: '.help'
+                                            id: 'eth'
+                                           
                                         },
                                         {
-                                            title: `${dtzTheme.resultEmojis[8]} Contact Owner`,
+                                            title: `${dtzTheme.resultEmojis[8]} CONTACT OWNER`,
                                             description: 'Get VIP Support & Assistance',
                                             id: '.owner'
                                         },
                                         {
-                                            title: `${dtzTheme.resultEmojis[0]} E-Thaksalawa`,
+                                            title: `${dtzTheme.resultEmojis[0]} MOVIE COMMAND`,
                                             description: 'Access Premium Paper Library',
                                             id: '.eth'
                                         },
                                         {
-                                            title: `${dtzTheme.resultEmojis[7]} Study Hub`,
+                                            title: `${dtzTheme.resultEmojis[7]} 18+ COMMANDS`,
                                             description: 'Extra Learning Materials',
                                             id: '.study'
                                         },
                                         {
-                                            title: `${dtzTheme.resultEmojis[9]} Short Notes`,
+                                            title: `${dtzTheme.resultEmojis[9]} SEARCH COMMAND S`,
                                             description: 'Exam Strategies & Techniques',
                                             id: '.stnote'
                                         },
                                         {
-                                            title: `${dtzTheme.resultEmojis[8]} Bot Stats`,
+                                            title: `${dtzTheme.resultEmojis[8]} BOT STATUS`,
                                             description: 'System Performance Analytics',
                                             id: '.ping'
+                                            
                                         }
                                     ]
                                 }
